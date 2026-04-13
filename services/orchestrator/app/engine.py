@@ -12,9 +12,11 @@ from .models import (
     AuditEvent,
     DetectionResponse,
     Incident,
+    IncidentComment,
     RemediationAction,
     Severity,
     SignalWindow,
+    WebhookIntegrationsConfig,
 )
 
 
@@ -23,6 +25,10 @@ class StateStore:
     incidents: List[Incident] = field(default_factory=list)
     actions: List[ActionResult] = field(default_factory=list)
     audit_events: List[AuditEvent] = field(default_factory=list)
+    comments_by_incident: Dict[str, List[IncidentComment]] = field(default_factory=dict)
+    webhook_config: WebhookIntegrationsConfig = field(
+        default_factory=WebhookIntegrationsConfig
+    )
     lock: Lock = field(default_factory=Lock)
 
 

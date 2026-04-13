@@ -71,3 +71,24 @@ class AuditEvent(BaseModel):
     actor: str
     message: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class IncidentComment(BaseModel):
+    id: str
+    incident_id: str
+    author: str
+    body: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class CreateCommentRequest(BaseModel):
+    author: str = "operator"
+    body: str
+
+
+class WebhookIntegrationsConfig(BaseModel):
+    slack_webhook_url: str = ""
+    jira_webhook_url: str = ""
+    email_webhook_url: str = ""
+    notify_on_ack: bool = True
+    notify_on_escalate: bool = True

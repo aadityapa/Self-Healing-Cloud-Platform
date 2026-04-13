@@ -10,7 +10,12 @@ API_BASE = os.getenv(
     "ORCHESTRATOR_URL", "https://nexovo-helling-orchestrator.onrender.com"
 )
 
-st.set_page_config(page_title="Self-Healing Platform", layout="wide")
+st.set_page_config(page_title="Nexovo Helling Cloud", layout="wide", page_icon="☁️")
+
+if "nexovo_view" not in st.session_state:
+    st.session_state["nexovo_view"] = "home"
+if "selected_plan" not in st.session_state:
+    st.session_state["selected_plan"] = None
 
 
 def inject_theme(theme: str) -> None:
@@ -39,32 +44,38 @@ def inject_theme(theme: str) -> None:
     st.markdown(
         f"""
 <style>
+    .scene-3d {{
+        perspective: 1200px;
+        perspective-origin: 50% 20%;
+        margin: 8px 0 18px 0;
+    }}
     .topnav {{
         position: sticky;
         top: 0;
         z-index: 99;
         background: {card_bg};
         border: 1px solid {border};
-        border-radius: 14px;
-        padding: 10px 14px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 8px 24px rgba(2, 6, 23, 0.18);
+        border-radius: 16px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 12px 40px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+        backdrop-filter: blur(12px);
     }}
-    .nav-brand {{font-weight: 800; letter-spacing: 0.3px;}}
+    .nav-brand {{font-weight: 800; letter-spacing: 0.4px; font-size: 1.05rem;}}
     .nav-links {{font-size: 0.88rem; opacity: 0.9;}}
     .main {{color: {text_color};}}
     .stApp {{background: {bg};}}
     .hero {{
-        background: linear-gradient(135deg, rgba(245,158,11,0.20) 0%, rgba(251,191,36,0.16) 45%, rgba(56,189,248,0.10) 100%);
+        background: linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(251,191,36,0.18) 45%, rgba(56,189,248,0.12) 100%);
         border: 1px solid {border};
-        border-radius: 18px;
-        padding: 18px 22px;
-        box-shadow: 0 20px 45px rgba(2, 6, 23, 0.25), inset 0 1px 0 rgba(255,255,255,0.06);
-        backdrop-filter: blur(8px);
+        border-radius: 20px;
+        padding: 22px 26px;
+        box-shadow: 0 28px 56px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.1);
+        backdrop-filter: blur(12px);
         margin-bottom: 14px;
+        transform-style: preserve-3d;
+        transform: rotateX(2deg) translateZ(8px);
+        animation: heroFloat 8s ease-in-out infinite;
     }}
     .hero-title {{
         font-size: 1.8rem;
@@ -86,14 +97,21 @@ def inject_theme(theme: str) -> None:
     .feature {{
         background: {card_bg};
         border: 1px solid {border};
-        border-radius: 14px;
-        padding: 10px 12px;
-        box-shadow: 0 14px 28px rgba(2, 6, 23, 0.16);
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        border-radius: 16px;
+        padding: 14px 16px;
+        box-shadow: 0 18px 36px rgba(2, 6, 23, 0.2), inset 0 -2px 0 rgba(0,0,0,0.06);
+        transition: transform 0.35s ease, box-shadow 0.35s ease;
+        transform-style: preserve-3d;
+        transform: translateZ(0) rotateX(0deg);
+        animation: cardFloat 5s ease-in-out infinite;
     }}
+    .feature:nth-child(1) {{ animation-delay: 0s; }}
+    .feature:nth-child(2) {{ animation-delay: 0.4s; }}
+    .feature:nth-child(3) {{ animation-delay: 0.8s; }}
+    .feature:nth-child(4) {{ animation-delay: 1.2s; }}
     .feature:hover {{
-        transform: translateY(-4px);
-        box-shadow: 0 18px 32px rgba(2, 6, 23, 0.24);
+        transform: translateY(-8px) translateZ(16px) rotateX(2deg);
+        box-shadow: 0 28px 48px rgba(2, 6, 23, 0.32);
     }}
     div[data-testid="stMetric"] {{
         background: {card_bg};
@@ -120,13 +138,17 @@ def inject_theme(theme: str) -> None:
     .node-svg circle {{animation: pulse 3.6s ease-in-out infinite;}}
     .node-svg line {{stroke-dasharray: 4 5; animation: move 7s linear infinite;}}
     .cloud-3d {{
-        width: 120px;
-        height: 120px;
-        margin: 4px auto 10px auto;
+        width: 140px;
+        height: 140px;
+        margin: 12px auto 16px auto;
         border-radius: 50%;
-        background: radial-gradient(circle at 30% 30%, #7dd3fc, #2563eb 55%, #1e293b 100%);
-        box-shadow: inset -12px -12px 24px rgba(2,6,23,0.35), inset 10px 12px 18px rgba(255,255,255,0.24), 0 20px 34px rgba(2,6,23,0.40);
-        animation: spinCloud 12s linear infinite;
+        background: radial-gradient(circle at 28% 28%, #bae6fd, #0ea5e9 45%, #1e3a8a 88%, #0f172a 100%);
+        box-shadow:
+          inset -16px -20px 32px rgba(2,6,23,0.45),
+          inset 14px 18px 28px rgba(255,255,255,0.35),
+          0 32px 64px rgba(14,165,233,0.35),
+          0 0 80px rgba(56,189,248,0.25);
+        animation: spinCloud 14s linear infinite;
         transform-style: preserve-3d;
     }}
     .steps {{
@@ -143,15 +165,21 @@ def inject_theme(theme: str) -> None:
         gap: 12px;
         margin: 12px 0 18px 0;
     }}
-    .plan {{
+    .plan-card-wrap {{
         background: {card_bg};
         border: 1px solid {border};
-        border-radius: 16px;
-        padding: 14px;
-        box-shadow: 0 14px 26px rgba(2, 6, 23, 0.18);
-        transition: transform 0.22s ease, border-color 0.22s ease;
+        border-radius: 18px;
+        padding: 18px;
+        min-height: 200px;
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.2);
+        transform-style: preserve-3d;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }}
-    .plan:hover {{transform: translateY(-5px); border-color: #f59e0b;}}
+    .plan-card-wrap:hover {{
+        transform: translateY(-10px) rotateX(4deg) translateZ(12px);
+        box-shadow: 0 32px 56px rgba(245, 158, 11, 0.2);
+        border-color: #f59e0b;
+    }}
     .plan-price {{font-size: 1.35rem; font-weight: 800; margin-top: 6px;}}
     .chip {{
         display: inline-block;
@@ -177,7 +205,10 @@ def inject_theme(theme: str) -> None:
     }}
     @keyframes pulse {{0%,100% {{transform: scale(1); opacity: 0.8;}} 50% {{transform: scale(1.08); opacity: 1;}}}}
     @keyframes move {{from {{stroke-dashoffset: 0;}} to {{stroke-dashoffset: 60;}}}}
-    @keyframes spinCloud {{from {{transform: rotateY(0deg) rotateX(6deg);}} to {{transform: rotateY(360deg) rotateX(6deg);}}}}
+    @keyframes spinCloud {{from {{transform: rotateY(0deg) rotateX(8deg);}} to {{transform: rotateY(360deg) rotateX(8deg);}}}}
+    @keyframes cloudBob {{0%,100% {{transform: translateY(0) translateZ(0);}} 50% {{transform: translateY(-10px) translateZ(20px);}}}}
+    @keyframes heroFloat {{0%,100% {{transform: rotateX(2deg) translateZ(8px);}} 50% {{transform: rotateX(4deg) translateZ(14px);}}}}
+    @keyframes cardFloat {{0%,100% {{transform: translateZ(0);}} 50% {{transform: translateZ(6px);}}}}
     @keyframes shift {{0% {{background-position: 0% 50%;}} 50% {{background-position: 100% 50%;}} 100% {{background-position: 0% 50%;}}}}
 </style>
 """,
@@ -227,17 +258,38 @@ inject_theme(theme_mode)
 if auto_refresh:
     st.caption("Auto refresh enabled. Click 'Refresh now' every few seconds.")
 
-st.markdown(
-    """
-<div class='topnav'>
-  <div class='nav-brand'>NEXOVO HELLING CLOUD</div>
-  <div class='nav-links'>Platform | AI Engine | Security | Pricing | Docs</div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+st.markdown("<div class='topnav'>", unsafe_allow_html=True)
+nav_b1, nav_b2, nav_b3, nav_b4, nav_b5, nav_b6 = st.columns([2.2, 1, 1, 1, 1, 1])
+with nav_b1:
+    st.markdown("<span class='nav-brand'>NEXOVO HELLING CLOUD</span>", unsafe_allow_html=True)
+with nav_b2:
+    if st.button("Home", use_container_width=True, key="nav_home"):
+        st.session_state["nexovo_view"] = "home"
+        st.rerun()
+with nav_b3:
+    if st.button("Console", use_container_width=True, key="nav_console"):
+        st.session_state["nexovo_view"] = "console"
+        st.rerun()
+with nav_b4:
+    if st.button("Pricing", use_container_width=True, key="nav_pricing"):
+        st.session_state["nexovo_view"] = "pricing"
+        st.rerun()
+with nav_b5:
+    if st.button("Integrations", use_container_width=True, key="nav_integ"):
+        st.session_state["nexovo_view"] = "integrations"
+        st.rerun()
+with nav_b6:
+    st.link_button("Docs", "https://technexovo.com/blog", use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-if show_marketing:
+if st.session_state.get("selected_plan"):
+    st.success(
+        f"Plan selected: **{st.session_state['selected_plan']}** — open the Console tab to run live operations."
+    )
+
+view = st.session_state["nexovo_view"]
+if show_marketing and view in ("home", "pricing"):
+    st.markdown("<div class='scene-3d'>", unsafe_allow_html=True)
     st.markdown(
         """
 <div class='hero'>
@@ -261,44 +313,73 @@ if show_marketing:
 <div class='feature-grid'>
   <div class='feature'><b>Real-Time Intelligence</b><br/>Actionable signal detection for smarter decisions.</div>
   <div class='feature'><b>AI RCA</b><br/>Correlate metrics, logs, and events in seconds.</div>
-  <div class='feature'><b>Seamless Integration</b><br/>Connect your stack and automate every workflow.</div>
+  <div class='feature'><b>Seamless Integration</b><br/>Slack, Jira, and email webhooks for every escalation.</div>
   <div class='feature'><b>Measurable Impact</b><br/>Track remediation success and operational ROI.</div>
 </div>
 """,
         unsafe_allow_html=True,
     )
-    st.markdown(
-        """
-<div class='selling-grid'>
-  <div class='plan'>
-    <b>Starter Ops</b>
-    <div class='plan-price'>$49<span style='font-size:0.8rem;'>/mo</span></div>
-    Best for small teams building AI-assisted incident response.
-  </div>
-  <div class='plan'>
-    <b>Growth SRE <span class='chip'>Most Popular</span></b>
-    <div class='plan-price'>$199<span style='font-size:0.8rem;'>/mo</span></div>
-    Full anomaly + RCA + safe auto-remediation workflow.
-  </div>
-  <div class='plan'>
-    <b>Enterprise Autonomous</b>
-    <div class='plan-price'>Custom</div>
-    Multi-cluster, policy guardrails, and dedicated reliability advisory.
-  </div>
-</div>
-<div class='cta'>Book a Strategy Call | Scale with Nexovo</div>
-""",
-        unsafe_allow_html=True,
-    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("### Plans that scale with you")
+    pc1, pc2, pc3 = st.columns(3)
+    with pc1:
+        st.markdown(
+            "<div class='plan-card-wrap'><b>Starter Ops</b><div class='plan-price'>$49<small>/mo</small></div>"
+            "<p>Small teams building AI-assisted incident response.</p></div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Choose Starter", use_container_width=True, key="choose_starter"):
+            st.session_state["selected_plan"] = "Starter Ops ($49/mo)"
+            st.session_state["nexovo_view"] = "console"
+            st.balloons()
+            st.rerun()
+    with pc2:
+        st.markdown(
+            "<div class='plan-card-wrap'><b>Growth SRE</b> <span class='chip'>Popular</span>"
+            "<div class='plan-price'>$199<small>/mo</small></div>"
+            "<p>Full anomaly, RCA, and safe auto-remediation.</p></div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Choose Growth", use_container_width=True, key="choose_growth"):
+            st.session_state["selected_plan"] = "Growth SRE ($199/mo)"
+            st.session_state["nexovo_view"] = "console"
+            st.balloons()
+            st.rerun()
+    with pc3:
+        st.markdown(
+            "<div class='plan-card-wrap'><b>Enterprise Autonomous</b>"
+            "<div class='plan-price'>Custom</div>"
+            "<p>Multi-cluster guardrails and dedicated reliability advisory.</p></div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Contact Sales", use_container_width=True, key="choose_ent"):
+            st.session_state["selected_plan"] = "Enterprise (custom)"
+            st.rerun()
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.link_button(
+            "Book a strategy call",
+            "https://technexovo.com/contact",
+            use_container_width=True,
+            type="primary",
+        )
+    with c2:
+        st.link_button("Visit technexovo.com", "https://technexovo.com", use_container_width=True)
+
     st.markdown(
         """
 <div class='steps'>
   <b>How it works:</b><br/>
-  1) Observe metrics/logs/events -> 2) Detect anomaly -> 3) RCA hypothesis -> 4) Safe remediation -> 5) Learn and improve
+  1) Observe metrics/logs/events &rarr; 2) Detect anomaly &rarr; 3) RCA &rarr; 4) Safe remediation &rarr; 5) Learn and improve
 </div>
 """,
         unsafe_allow_html=True,
     )
+
+if show_marketing and view == "console":
+    st.info("Operations console below — run detection, manage incidents, and review audit trail.")
 
 
 def get_json(path: str):
@@ -428,6 +509,55 @@ with endpoint_col:
         unsafe_allow_html=True,
     )
 
+if show_marketing and st.session_state.get("nexovo_view") == "integrations":
+    st.markdown("### Webhook integrations")
+    st.caption(
+        "Configure outbound webhooks for **acknowledgment** and **escalation** events. "
+        "Slack: Incoming Webhook URL. Jira: Automation incoming webhook. "
+        "Email: any HTTPS endpoint (Zapier, Make, SendGrid, etc.)."
+    )
+    if "demo_webhook_cfg" not in st.session_state:
+        st.session_state["demo_webhook_cfg"] = {
+            "slack_webhook_url": "",
+            "jira_webhook_url": "",
+            "email_webhook_url": "",
+            "notify_on_ack": True,
+            "notify_on_escalate": True,
+        }
+    if not demo_mode and not st.session_state.get("_webhook_hydrated"):
+        try:
+            remote_cfg = httpx.get(f"{API_BASE}/v1/integrations/webhooks", timeout=10.0).json()
+            st.session_state["demo_webhook_cfg"] = remote_cfg
+        except Exception:
+            pass
+        st.session_state["_webhook_hydrated"] = True
+
+    cfg = st.session_state["demo_webhook_cfg"]
+    slack_u = st.text_input("Slack Incoming Webhook URL", value=cfg.get("slack_webhook_url", "") or "")
+    jira_u = st.text_input("Jira / generic webhook URL", value=cfg.get("jira_webhook_url", "") or "")
+    email_u = st.text_input("Email relay webhook URL (HTTPS)", value=cfg.get("email_webhook_url", "") or "")
+    n_ack = st.toggle("Notify on acknowledge", value=bool(cfg.get("notify_on_ack", True)))
+    n_esc = st.toggle("Notify on escalate", value=bool(cfg.get("notify_on_escalate", True)))
+
+    if st.button("Save integration settings", type="primary", key="save_webhooks"):
+        payload = {
+            "slack_webhook_url": slack_u,
+            "jira_webhook_url": jira_u,
+            "email_webhook_url": email_u,
+            "notify_on_ack": n_ack,
+            "notify_on_escalate": n_esc,
+        }
+        st.session_state["demo_webhook_cfg"] = payload
+        if demo_mode:
+            st.success("Saved locally (demo mode). Webhooks fire only when connected to live API.")
+        else:
+            try:
+                r = httpx.put(f"{API_BASE}/v1/integrations/webhooks", json=payload, timeout=15.0)
+                r.raise_for_status()
+                st.success("Saved to orchestrator — ack/escalate will notify these endpoints.")
+            except Exception as exc:
+                st.error(f"Save failed: {exc}")
+
 try:
     incidents = get_json("/v1/incidents")
 except Exception:
@@ -449,6 +579,8 @@ if demo_mode and "demo_actions" not in st.session_state:
     st.session_state["demo_actions"] = []
 if demo_mode and "demo_audit" not in st.session_state:
     st.session_state["demo_audit"] = []
+if demo_mode and "demo_comments" not in st.session_state:
+    st.session_state["demo_comments"] = {}
 if demo_mode:
     incidents = st.session_state["demo_incidents"]
     actions = st.session_state["demo_actions"]
@@ -725,7 +857,61 @@ with left:
                     st.success(f"Assigned to {owner_value}.")
                 except Exception as exc:
                     st.error(f"Owner assignment failed: {exc}")
-        with st.expander("Detailed incident context", expanded=True):
+
+        st.markdown("#### Incident comment thread")
+        iid = selected_incident.get("id", "")
+        if demo_mode:
+            thread = list(st.session_state["demo_comments"].get(iid, []))
+        else:
+            try:
+                thread = httpx.get(f"{API_BASE}/v1/incidents/{iid}/comments", timeout=10.0).json()
+            except Exception:
+                thread = []
+        for c in thread[-50:]:
+            ts = c.get("created_at", "")
+            author = c.get("author", "user")
+            body = c.get("body", "")
+            st.markdown(f"**{author}** · `{ts}`  \n{body}")
+            st.divider()
+        c_author = st.text_input("Your name", value="operator", key=f"ct_auth_{iid}")
+        c_body = st.text_area("Add a comment", key=f"ct_body_{iid}", height=90)
+        if st.button("Post comment", key=f"ct_post_{iid}"):
+            if not c_body.strip():
+                st.warning("Enter comment text.")
+            elif demo_mode:
+                entry = {
+                    "id": str(uuid.uuid4()),
+                    "incident_id": iid,
+                    "author": c_author,
+                    "body": c_body.strip(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                st.session_state["demo_comments"].setdefault(iid, []).append(entry)
+                st.session_state["demo_audit"] = [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "incident_id": iid,
+                        "event_type": "comment_added",
+                        "actor": c_author,
+                        "message": c_body.strip()[:200],
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                ] + st.session_state.get("demo_audit", [])
+                st.success("Comment added.")
+                st.rerun()
+            else:
+                try:
+                    httpx.post(
+                        f"{API_BASE}/v1/incidents/{iid}/comments",
+                        json={"author": c_author, "body": c_body.strip()},
+                        timeout=10.0,
+                    ).raise_for_status()
+                    st.success("Comment posted.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Comment failed: {exc}")
+
+        with st.expander("Detailed incident context", expanded=False):
             st.json(selected_incident)
     else:
         st.info("No incidents yet. Send a signal from the right panel.")

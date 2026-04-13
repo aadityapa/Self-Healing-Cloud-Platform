@@ -7,8 +7,18 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_late
 from starlette.responses import Response
 
 from .engine import DetectionEngine, PolicyEngine, RemediationEngine, StateStore
-from .models import ActionResult, DetectionResponse, Incident, SignalWindow
-from .models import AuditEvent, IncidentAssignmentRequest
+from .models import (
+    ActionResult,
+    AuditEvent,
+    CreateCommentRequest,
+    DetectionResponse,
+    Incident,
+    IncidentAssignmentRequest,
+    IncidentComment,
+    SignalWindow,
+    WebhookIntegrationsConfig,
+)
+from .webhooks_notifier import notify_integrations
 
 app = FastAPI(title="Self-Healing Orchestrator", version="1.0.0")
 
@@ -116,6 +126,8 @@ def acknowledge_incident(incident_id: str) -> Dict[str, str]:
                 created_at=datetime.utcnow(),
             ),
         )
+        cfg = state.webhook_config.model_copy()
+    notify_integrations(cfg, incident, "acknowledged", "Incident acknowledged via dashboard")
     return {"status": "ok", "message": f"Incident {incident_id} acknowledged"}
 
 
@@ -136,6 +148,8 @@ def escalate_incident(incident_id: str) -> Dict[str, str]:
                 created_at=datetime.utcnow(),
             ),
         )
+        cfg = state.webhook_config.model_copy()
+    notify_integrations(cfg, incident, "escalated", "Incident escalated to SRE on-call")
     return {"status": "ok", "message": f"Incident {incident_id} escalated to SRE on-call"}
 
 
@@ -159,3 +173,49 @@ def assign_incident_owner(
             ),
         )
     return {"status": "ok", "message": f"Incident {incident_id} assigned to {request.owner}"}
+
+
+@app.get("/v1/integrations/webhooks", response_model=WebhookIntegrationsConfig)
+def get_webhook_integrations() -> WebhookIntegrationsConfig:
+    return state.webhook_config
+
+
+@app.put("/v1/integrations/webhooks", response_model=WebhookIntegrationsConfig)
+def put_webhook_integrations(body: WebhookIntegrationsConfig) -> WebhookIntegrationsConfig:
+    with state.lock:
+        state.webhook_config = body
+    return state.webhook_config
+
+
+@app.get("/v1/incidents/{incident_id}/comments", response_model=List[IncidentComment])
+def list_incident_comments(incident_id: str) -> List[IncidentComment]:
+    _get_incident_or_404(incident_id)
+    return list(state.comments_by_incident.get(incident_id, []))
+
+
+@app.post("/v1/incidents/{incident_id}/comments", response_model=IncidentComment)
+def add_incident_comment(incident_id: str, body: CreateCommentRequest) -> IncidentComment:
+    with state.lock:
+        _get_incident_or_404(incident_id)
+        comment = IncidentComment(
+            id=str(uuid4()),
+            incident_id=incident_id,
+            author=body.author,
+            body=body.body,
+            created_at=datetime.utcnow(),
+        )
+        if incident_id not in state.comments_by_incident:
+            state.comments_by_incident[incident_id] = []
+        state.comments_by_incident[incident_id].append(comment)
+        state.audit_events.insert(
+            0,
+            AuditEvent(
+                id=str(uuid4()),
+                incident_id=incident_id,
+                event_type="comment_added",
+                actor=body.author,
+                message=body.body[:200],
+                created_at=datetime.utcnow(),
+            ),
+        )
+    return comment
