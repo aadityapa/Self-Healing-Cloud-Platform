@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timezone
 
 import httpx
@@ -298,14 +299,43 @@ def get_json(path: str):
     return httpx.get(f"{API_BASE}{path}", timeout=10.0).json()
 
 
+def synthetic_incident(service: str, namespace: str, cpu: int, memory: int, error_rate: float, latency: int):
+    sev = "low"
+    if error_rate > 5 or latency > 850:
+        sev = "critical"
+    elif error_rate > 3 or cpu > 90 or memory > 90:
+        sev = "high"
+    elif error_rate > 1.5 or latency > 450:
+        sev = "medium"
+    return {
+        "id": str(uuid.uuid4()),
+        "service": service,
+        "severity": sev,
+        "confidence": min(0.99, max(0.2, (error_rate + cpu / 30.0) / 10.0)),
+        "hypothesis": "Simulated RCA: probable saturation or dependency latency.",
+        "recommended_action": "scale_deployment" if cpu > 90 else "restart_pod",
+        "executed": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": {
+            "namespace": namespace,
+            "cpu": f"{cpu:.2f}",
+            "memory": f"{memory:.2f}",
+            "error_rate": f"{error_rate:.2f}",
+            "latency_ms": f"{latency:.2f}",
+        },
+    }
+
+
 status_col, _, endpoint_col = st.columns([1, 0.2, 2])
+demo_mode = False
 with status_col:
     try:
         health = get_json("/health")
         st.success("Orchestrator Online")
     except Exception:
         health = {"status": "unreachable"}
-        st.error("Orchestrator Offline")
+        demo_mode = True
+        st.warning("Orchestrator Offline (Dashboard running in demo mode)")
 with endpoint_col:
     st.markdown(
         f"<div class='card'><b>Connected API:</b> {API_BASE}<br><b>Status:</b> {health.get('status', 'unknown')}<div class='tiny'>Live AI remediation control plane link active.</div></div>",
@@ -321,6 +351,14 @@ try:
     actions = get_json("/v1/actions")
 except Exception:
     actions = []
+
+if demo_mode and "demo_incidents" not in st.session_state:
+    st.session_state["demo_incidents"] = []
+if demo_mode and "demo_actions" not in st.session_state:
+    st.session_state["demo_actions"] = []
+if demo_mode:
+    incidents = st.session_state["demo_incidents"]
+    actions = st.session_state["demo_actions"]
 
 if selected_service.strip():
     incidents = [i for i in incidents if i.get("service", "").lower() == selected_service.strip().lower()]
@@ -385,15 +423,36 @@ with right:
                 "deploy_changed_last_15m": deploy_changed,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            try:
-                resp = httpx.post(f"{API_BASE}/v1/detect", json=payload, timeout=10.0)
-                resp.raise_for_status()
-                data = resp.json()
-                st.success("Signal processed successfully.")
+            if demo_mode:
+                incident = synthetic_incident(
+                    service=service,
+                    namespace=namespace,
+                    cpu=cpu,
+                    memory=memory,
+                    error_rate=error_rate,
+                    latency=latency,
+                )
+                action = {
+                    "action": incident["recommended_action"],
+                    "success": True,
+                    "message": "Demo mode remediation executed locally in dashboard.",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                st.session_state["demo_incidents"] = [incident] + st.session_state["demo_incidents"]
+                st.session_state["demo_actions"] = [action] + st.session_state["demo_actions"]
+                st.success("Demo signal processed (no backend needed).")
                 with st.expander("Detection Response", expanded=True):
-                    st.json(data)
-            except Exception as exc:
-                st.error(f"Failed to call orchestrator: {exc}")
+                    st.json({"incident": incident, "action_result": action, "mode": "demo"})
+            else:
+                try:
+                    resp = httpx.post(f"{API_BASE}/v1/detect", json=payload, timeout=10.0)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    st.success("Signal processed successfully.")
+                    with st.expander("Detection Response", expanded=True):
+                        st.json(data)
+                except Exception as exc:
+                    st.error(f"Failed to call orchestrator: {exc}")
 
 with left:
     st.markdown("### Incident Feed")
