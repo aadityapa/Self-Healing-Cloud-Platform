@@ -8,35 +8,290 @@ import streamlit as st
 API_BASE = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="Self-Healing Platform", layout="wide")
-st.markdown(
-    """
+
+
+def inject_theme(theme: str) -> None:
+    is_light = theme == "light"
+    bg = (
+        "radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.20), transparent 35%),"
+        "radial-gradient(circle at 85% 10%, rgba(129, 140, 248, 0.24), transparent 40%),"
+        "radial-gradient(circle at 50% 80%, rgba(14, 165, 233, 0.12), transparent 45%),"
+        "linear-gradient(165deg, #050816 0%, #0b1220 45%, #0b1024 100%)"
+    )
+    text_color = "#e2e8f0"
+    card_bg = "linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.72))"
+    border = "rgba(148, 163, 184, 0.22)"
+    hero_sub = "#bfdbfe"
+    if is_light:
+        bg = (
+            "radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.14), transparent 35%),"
+            "radial-gradient(circle at 88% 12%, rgba(99, 102, 241, 0.12), transparent 40%),"
+            "linear-gradient(165deg, #eff6ff 0%, #f8fafc 45%, #eef2ff 100%)"
+        )
+        text_color = "#0f172a"
+        card_bg = "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(241,245,249,0.85))"
+        border = "rgba(100, 116, 139, 0.25)"
+        hero_sub = "#1d4ed8"
+
+    st.markdown(
+        f"""
 <style>
-    .main {background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%); color: #e2e8f0;}
-    .stApp {background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);}
-    div[data-testid="stMetric"] {
-        background: #111827;
-        border: 1px solid #1f2937;
+    .topnav {{
+        position: sticky;
+        top: 0;
+        z-index: 99;
+        background: {card_bg};
+        border: 1px solid {border};
         border-radius: 14px;
-        padding: 10px;
-    }
-    .card {
-        background: #111827;
-        border: 1px solid #1f2937;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 8px 24px rgba(2, 6, 23, 0.18);
+    }}
+    .nav-brand {{font-weight: 800; letter-spacing: 0.3px;}}
+    .nav-links {{font-size: 0.88rem; opacity: 0.9;}}
+    .main {{color: {text_color};}}
+    .stApp {{background: {bg};}}
+    .hero {{
+        background: linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(99,102,241,0.18) 45%, rgba(14,165,233,0.14) 100%);
+        border: 1px solid {border};
+        border-radius: 18px;
+        padding: 18px 22px;
+        box-shadow: 0 20px 45px rgba(2, 6, 23, 0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+        backdrop-filter: blur(8px);
+        margin-bottom: 14px;
+    }}
+    .hero-title {{
+        font-size: 1.8rem;
+        font-weight: 750;
+        margin: 0;
+        letter-spacing: 0.3px;
+    }}
+    .hero-sub {{
+        margin-top: 6px;
+        color: {hero_sub};
+        font-size: 0.95rem;
+    }}
+    .feature-grid {{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 10px;
+        margin: 12px 0 16px 0;
+    }}
+    .feature {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 14px;
+        padding: 10px 12px;
+        box-shadow: 0 14px 28px rgba(2, 6, 23, 0.16);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }}
+    .feature:hover {{
+        transform: translateY(-4px);
+        box-shadow: 0 18px 32px rgba(2, 6, 23, 0.24);
+    }}
+    div[data-testid="stMetric"] {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 16px 30px rgba(2, 6, 23, 0.20), inset 0 1px 0 rgba(255,255,255,0.04);
+    }}
+    .card {{
+        background: {card_bg};
+        border: 1px solid {border};
         border-radius: 14px;
         padding: 14px;
         margin-bottom: 12px;
-    }
-    .sev-critical {color: #ef4444; font-weight: 700;}
-    .sev-high {color: #f97316; font-weight: 700;}
-    .sev-medium {color: #eab308; font-weight: 700;}
-    .sev-low {color: #22c55e; font-weight: 700;}
+        box-shadow: 0 14px 28px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255,255,255,0.04);
+        backdrop-filter: blur(8px);
+    }}
+    .sev-critical {{color: #ef4444; font-weight: 700;}}
+    .sev-high {{color: #f97316; font-weight: 700;}}
+    .sev-medium {{color: #eab308; font-weight: 700;}}
+    .sev-low {{color: #22c55e; font-weight: 700;}}
+    .tiny {{color: #60a5fa; font-size: 0.84rem; margin-top: 4px;}}
+    .node-wrap {{height: 130px; margin-bottom: 8px;}}
+    .node-svg circle {{animation: pulse 3.6s ease-in-out infinite;}}
+    .node-svg line {{stroke-dasharray: 4 5; animation: move 7s linear infinite;}}
+    .cloud-3d {{
+        width: 120px;
+        height: 120px;
+        margin: 4px auto 10px auto;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #7dd3fc, #2563eb 55%, #1e293b 100%);
+        box-shadow: inset -12px -12px 24px rgba(2,6,23,0.35), inset 10px 12px 18px rgba(255,255,255,0.24), 0 20px 34px rgba(2,6,23,0.40);
+        animation: spinCloud 12s linear infinite;
+        transform-style: preserve-3d;
+    }}
+    .steps {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+    }}
+    .steps b {{color: #38bdf8;}}
+    .selling-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 12px;
+        margin: 12px 0 18px 0;
+    }}
+    .plan {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow: 0 14px 26px rgba(2, 6, 23, 0.18);
+        transition: transform 0.22s ease, border-color 0.22s ease;
+    }}
+    .plan:hover {{transform: translateY(-5px); border-color: #38bdf8;}}
+    .plan-price {{font-size: 1.35rem; font-weight: 800; margin-top: 6px;}}
+    .chip {{
+        display: inline-block;
+        border: 1px solid #38bdf8;
+        color: #38bdf8;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.72rem;
+        margin-left: 6px;
+        vertical-align: middle;
+    }}
+    .cta {{
+        background: linear-gradient(90deg, #2563eb, #06b6d4, #4f46e5);
+        background-size: 240% 240%;
+        color: white;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 700;
+        text-align: center;
+        margin: 10px 0 0 0;
+        animation: shift 6s ease infinite;
+        box-shadow: 0 14px 25px rgba(37, 99, 235, 0.4);
+    }}
+    @keyframes pulse {{0%,100% {{transform: scale(1); opacity: 0.8;}} 50% {{transform: scale(1.08); opacity: 1;}}}}
+    @keyframes move {{from {{stroke-dashoffset: 0;}} to {{stroke-dashoffset: 60;}}}}
+    @keyframes spinCloud {{from {{transform: rotateY(0deg) rotateX(6deg);}} to {{transform: rotateY(360deg) rotateX(6deg);}}}}
+    @keyframes shift {{0% {{background-position: 0% 50%;}} 50% {{background-position: 100% 50%;}} 100% {{background-position: 0% 50%;}}}}
 </style>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def gauge(label: str, value: float, max_value: float = 100.0) -> None:
+    pct = 0.0 if max_value == 0 else max(0.0, min(100.0, (value / max_value) * 100.0))
+    color = "#22c55e"
+    if pct >= 70:
+        color = "#f59e0b"
+    if pct >= 90:
+        color = "#ef4444"
+    st.markdown(
+        f"""
+<div class='card'>
+  <b>{label}</b>
+  <div style='margin-top:8px;height:10px;border-radius:999px;background:#334155;overflow:hidden;'>
+    <div style='width:{pct:.1f}%;height:10px;background:{color};box-shadow:0 0 12px {color};'></div>
+  </div>
+  <div class='tiny' style='margin-top:6px;'>{value:.1f}% utilization</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+with st.sidebar:
+    st.markdown("## Control Center")
+    if st.button("Refresh now", use_container_width=True):
+        st.rerun()
+    theme_mode = st.selectbox("Theme", ["dark", "light"], index=0)
+    auto_refresh = st.toggle("Auto refresh (15s)", value=False)
+    selected_service = st.text_input("Filter service", value="")
+    selected_severity = st.selectbox(
+        "Filter severity", ["all", "critical", "high", "medium", "low"], index=0
+    )
+    show_marketing = st.toggle("Show SaaS hero section", value=True)
+    st.markdown("---")
+    st.caption("Use this panel to tune views and run scenario simulations.")
+
+inject_theme(theme_mode)
+if auto_refresh:
+    st.caption("Auto refresh enabled. Click 'Refresh now' every few seconds.")
+
+st.markdown(
+    """
+<div class='topnav'>
+  <div class='nav-brand'>NEXUS HEALING CLOUD</div>
+  <div class='nav-links'>Platform | AI Engine | Security | Pricing | Docs</div>
+</div>
 """,
     unsafe_allow_html=True,
 )
 
-st.title("Self-Healing Cloud Platform")
-st.caption("AI-driven operations console for incident detection, RCA, and automated remediation.")
+if show_marketing:
+    st.markdown(
+        """
+<div class='hero'>
+  <p class='hero-title'>3D Cloud Operations Console</p>
+  <p class='hero-sub'>Modern AI-SRE command center for detection, RCA, and autonomous remediation.</p>
+</div>
+<div class='cloud-3d'></div>
+<div class='node-wrap'>
+  <svg class='node-svg' viewBox='0 0 960 140' width='100%' height='130' xmlns='http://www.w3.org/2000/svg'>
+    <line x1='80' y1='70' x2='280' y2='40' stroke='#38bdf8' stroke-width='2'/>
+    <line x1='280' y1='40' x2='480' y2='72' stroke='#818cf8' stroke-width='2'/>
+    <line x1='480' y1='72' x2='690' y2='38' stroke='#22d3ee' stroke-width='2'/>
+    <line x1='480' y1='72' x2='850' y2='94' stroke='#38bdf8' stroke-width='2'/>
+    <circle cx='80' cy='70' r='11' fill='#0ea5e9'/>
+    <circle cx='280' cy='40' r='12' fill='#6366f1'/>
+    <circle cx='480' cy='72' r='14' fill='#22d3ee'/>
+    <circle cx='690' cy='38' r='11' fill='#0ea5e9'/>
+    <circle cx='850' cy='94' r='12' fill='#6366f1'/>
+  </svg>
+</div>
+<div class='feature-grid'>
+  <div class='feature'><b>Predictive Healing</b><br/>Forecast risk before outage impact.</div>
+  <div class='feature'><b>AI RCA</b><br/>Correlate metrics, logs, and events in seconds.</div>
+  <div class='feature'><b>Safe Automation</b><br/>Guardrails and confidence-based execution.</div>
+  <div class='feature'><b>SRE Visibility</b><br/>Single-pane incident and action telemetry.</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+<div class='selling-grid'>
+  <div class='plan'>
+    <b>Starter Ops</b>
+    <div class='plan-price'>$49<span style='font-size:0.8rem;'>/mo</span></div>
+    Best for small teams building AI-assisted incident response.
+  </div>
+  <div class='plan'>
+    <b>Growth SRE <span class='chip'>Most Popular</span></b>
+    <div class='plan-price'>$199<span style='font-size:0.8rem;'>/mo</span></div>
+    Full anomaly + RCA + safe auto-remediation workflow.
+  </div>
+  <div class='plan'>
+    <b>Enterprise Autonomous</b>
+    <div class='plan-price'>Custom</div>
+    Multi-cluster, policy guardrails, and dedicated reliability advisory.
+  </div>
+</div>
+<div class='cta'>Book Live Demo | Launch Autonomous Healing</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+<div class='steps'>
+  <b>How it works:</b><br/>
+  1) Observe metrics/logs/events -> 2) Detect anomaly -> 3) RCA hypothesis -> 4) Safe remediation -> 5) Learn from outcome
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
 
 def get_json(path: str):
@@ -53,7 +308,7 @@ with status_col:
         st.error("Orchestrator Offline")
 with endpoint_col:
     st.markdown(
-        f"<div class='card'><b>Connected API:</b> {API_BASE}<br><b>Status:</b> {health.get('status', 'unknown')}</div>",
+        f"<div class='card'><b>Connected API:</b> {API_BASE}<br><b>Status:</b> {health.get('status', 'unknown')}<div class='tiny'>Live AI remediation control plane link active.</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -67,6 +322,12 @@ try:
 except Exception:
     actions = []
 
+if selected_service.strip():
+    incidents = [i for i in incidents if i.get("service", "").lower() == selected_service.strip().lower()]
+
+if selected_severity != "all":
+    incidents = [i for i in incidents if i.get("severity") == selected_severity]
+
 crit_count = sum(1 for i in incidents if i.get("severity") == "critical")
 success_count = sum(1 for a in actions if a.get("success"))
 success_rate = (success_count / len(actions) * 100) if actions else 0.0
@@ -77,10 +338,31 @@ kpi2.metric("Critical Incidents", crit_count)
 kpi3.metric("Remediation Actions", len(actions))
 kpi4.metric("Action Success Rate", f"{success_rate:.1f}%")
 
+cpu_avg = 0.0
+mem_avg = 0.0
+err_avg = 0.0
+if incidents:
+    cpu_vals = [float(i.get("metadata", {}).get("cpu", 0.0)) for i in incidents if i.get("metadata")]
+    mem_vals = [float(i.get("metadata", {}).get("memory", 0.0)) for i in incidents if i.get("metadata")]
+    err_vals = [float(i.get("metadata", {}).get("error_rate", 0.0)) for i in incidents if i.get("metadata")]
+    cpu_avg = sum(cpu_vals) / len(cpu_vals) if cpu_vals else 0.0
+    mem_avg = sum(mem_vals) / len(mem_vals) if mem_vals else 0.0
+    err_avg = sum(err_vals) / len(err_vals) if err_vals else 0.0
+
+g1, g2, g3 = st.columns(3)
+with g1:
+    gauge("CPU Load Gauge", cpu_avg)
+with g2:
+    gauge("Memory Load Gauge", mem_avg)
+with g3:
+    gauge("Error Rate Gauge", err_avg, max_value=20.0)
+
 left, right = st.columns([2.2, 1.2], gap="large")
 
 with right:
     st.markdown("### Simulate Production Signal")
+    st.caption("Use this simulator to mimic real incidents and watch automated RCA/action flow.")
+    st.caption("Tip: set CPU > 90 and Error Rate > 5 to emulate high-severity incidents.")
     with st.container(border=True):
         service = st.text_input("Service", value="checkout-service")
         namespace = st.text_input("Namespace", value="prod")
@@ -118,6 +400,7 @@ with left:
     if incidents:
         df = pd.DataFrame(incidents)[
             [
+                "id",
                 "service",
                 "severity",
                 "confidence",
@@ -130,12 +413,40 @@ with left:
         df["confidence"] = df["confidence"].map(lambda x: f"{x:.2f}")
         st.dataframe(df, use_container_width=True, hide_index=True)
 
+        sev_df = (
+            pd.DataFrame(incidents)["severity"]
+            .value_counts()
+            .rename_axis("severity")
+            .reset_index(name="count")
+        )
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.markdown("#### Severity Distribution")
+            st.bar_chart(sev_df.set_index("severity"))
+        with chart_col2:
+            st.markdown("#### Confidence Trend")
+            conf_df = pd.DataFrame(incidents)[["created_at", "confidence"]].copy()
+            conf_df["created_at"] = pd.to_datetime(conf_df["created_at"], errors="coerce")
+            conf_df = conf_df.sort_values("created_at")
+            conf_df = conf_df.set_index("created_at")
+            st.line_chart(conf_df)
+
         latest = incidents[0]
         sev = latest.get("severity", "low")
         st.markdown(
             f"<div class='card'><b>Latest RCA:</b> {latest.get('hypothesis', 'n/a')}<br><b>Severity:</b> <span class='sev-{sev}'>{sev.upper()}</span><br><b>Recommended Action:</b> {latest.get('recommended_action', 'n/a')}</div>",
             unsafe_allow_html=True,
         )
+
+        st.markdown("### Incident Drill-down")
+        incident_options = {
+            f"{item.get('service','unknown')} | {item.get('severity','low')} | {item.get('id','')}": item
+            for item in incidents[:25]
+        }
+        selected_key = st.selectbox("Select incident", list(incident_options.keys()))
+        selected_incident = incident_options[selected_key]
+        with st.expander("Detailed incident context", expanded=True):
+            st.json(selected_incident)
     else:
         st.info("No incidents yet. Send a signal from the right panel.")
 
@@ -144,5 +455,9 @@ with left:
         adf = pd.DataFrame(actions)[["action", "success", "message", "created_at"]]
         adf["success"] = adf["success"].map(lambda x: "Success" if x else "Blocked")
         st.dataframe(adf, use_container_width=True, hide_index=True)
+        action_stats = pd.DataFrame(actions)["action"].value_counts().reset_index()
+        action_stats.columns = ["action", "count"]
+        st.markdown("#### Action Mix")
+        st.area_chart(action_stats.set_index("action"))
     else:
         st.info("No remediation actions recorded yet.")
