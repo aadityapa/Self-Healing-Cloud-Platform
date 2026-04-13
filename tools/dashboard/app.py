@@ -6,7 +6,9 @@ import httpx
 import pandas as pd
 import streamlit as st
 
-API_BASE = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
+API_BASE = os.getenv(
+    "ORCHESTRATOR_URL", "https://nexovo-helling-orchestrator.onrender.com"
+)
 
 st.set_page_config(page_title="Self-Healing Platform", layout="wide")
 
@@ -299,6 +301,22 @@ def get_json(path: str):
     return httpx.get(f"{API_BASE}{path}", timeout=10.0).json()
 
 
+def check_backend_online() -> bool:
+    try:
+        resp = httpx.get(f"{API_BASE}/health", timeout=8.0)
+        if resp.status_code == 200:
+            return True
+    except Exception:
+        pass
+    try:
+        # Fallback probe because some hosted free-tier setups may intermittently
+        # return 404 on /health during cold starts while API routes are available.
+        resp = httpx.get(f"{API_BASE}/v1/incidents", timeout=8.0)
+        return resp.status_code == 200
+    except Exception:
+        return False
+
+
 def synthetic_incident(service: str, namespace: str, cpu: int, memory: int, error_rate: float, latency: int):
     sev = "low"
     if error_rate > 5 or latency > 850:
@@ -329,10 +347,10 @@ def synthetic_incident(service: str, namespace: str, cpu: int, memory: int, erro
 status_col, _, endpoint_col = st.columns([1, 0.2, 2])
 demo_mode = False
 with status_col:
-    try:
-        health = get_json("/health")
+    if check_backend_online():
+        health = {"status": "ok"}
         st.success("Orchestrator Online")
-    except Exception:
+    else:
         health = {"status": "unreachable"}
         demo_mode = True
         st.warning("Orchestrator Offline (Dashboard running in demo mode)")
