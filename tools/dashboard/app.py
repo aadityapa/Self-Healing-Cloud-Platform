@@ -344,6 +344,34 @@ def synthetic_incident(service: str, namespace: str, cpu: int, memory: int, erro
     }
 
 
+def incident_runbook(incident: dict) -> list[str]:
+    severity = incident.get("severity", "low")
+    action = incident.get("recommended_action", "notify_human")
+    service = incident.get("service", "service")
+    steps = [
+        f"Validate impacted service `{service}` and confirm scope in namespace.",
+        "Check last deployment and configuration changes in previous 30 minutes.",
+        "Correlate p95 latency, error-rate, and pod health to confirm root cause.",
+    ]
+    if action == "rollback_deployment":
+        steps.append("Trigger rollback to previous stable version and monitor 5-minute SLO recovery.")
+    elif action == "scale_deployment":
+        steps.append("Scale replicas and verify queue depth and CPU return below saturation thresholds.")
+    elif action == "restart_pod":
+        steps.append("Restart unhealthy pods in rolling manner and verify no spike in 5xx responses.")
+    else:
+        steps.append("Escalate to on-call engineer and capture diagnostics bundle.")
+    if severity in {"high", "critical"}:
+        steps.append("Open incident bridge, assign incident commander, and post updates every 10 minutes.")
+    return steps
+
+
+def reliability_score(incidents_count: int, critical_count: int, success_rate: float) -> float:
+    base = 100.0
+    penalty = (incidents_count * 1.2) + (critical_count * 4.0) + ((100.0 - success_rate) * 0.2)
+    return max(0.0, min(100.0, base - penalty))
+
+
 status_col, _, endpoint_col = st.columns([1, 0.2, 2])
 demo_mode = False
 with status_col:
@@ -541,3 +569,133 @@ with left:
         st.area_chart(action_stats.set_index("action"))
     else:
         st.info("No remediation actions recorded yet.")
+
+st.markdown("## Operations Intelligence Toolkit")
+ops_tab, runbook_tab, planner_tab, architecture_tab = st.tabs(
+    ["Service Intelligence", "Runbook Assistant", "Scenario Planner", "Architecture Map"]
+)
+
+with ops_tab:
+    if incidents:
+        idf = pd.DataFrame(incidents)
+        if "created_at" in idf.columns:
+            idf["created_at"] = pd.to_datetime(idf["created_at"], errors="coerce")
+        svc = (
+            idf.groupby("service", as_index=False)
+            .agg(
+                incidents=("id", "count"),
+                avg_confidence=("confidence", "mean"),
+                critical=("severity", lambda s: int((s == "critical").sum())),
+            )
+            .sort_values(["incidents", "critical"], ascending=False)
+        )
+        svc["avg_confidence"] = svc["avg_confidence"].fillna(0.0).map(lambda x: round(float(x), 2))
+        st.markdown("### Service Leaderboard")
+        st.dataframe(svc, use_container_width=True, hide_index=True)
+
+        left_ops, right_ops = st.columns(2)
+        with left_ops:
+            st.markdown("#### Incident Volume by Service")
+            st.bar_chart(svc.set_index("service")[["incidents"]])
+        with right_ops:
+            st.markdown("#### Critical Incidents by Service")
+            st.bar_chart(svc.set_index("service")[["critical"]])
+    else:
+        st.info("No incidents available for service intelligence yet.")
+
+    export_col1, export_col2 = st.columns(2)
+    with export_col1:
+        if incidents:
+            incident_csv = pd.DataFrame(incidents).to_csv(index=False)
+            st.download_button(
+                "Export Incidents CSV",
+                data=incident_csv,
+                file_name="nexovo_incidents.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+    with export_col2:
+        if actions:
+            action_csv = pd.DataFrame(actions).to_csv(index=False)
+            st.download_button(
+                "Export Actions CSV",
+                data=action_csv,
+                file_name="nexovo_actions.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+with runbook_tab:
+    st.markdown("### AI-Guided Incident Runbook")
+    if incidents:
+        runbook_options = {
+            f"{item.get('service','unknown')} | {item.get('severity','low')} | {item.get('id','')}": item
+            for item in incidents[:25]
+        }
+        rb_key = st.selectbox("Choose incident for runbook", list(runbook_options.keys()))
+        rb_incident = runbook_options[rb_key]
+        steps = incident_runbook(rb_incident)
+        for idx, step in enumerate(steps, start=1):
+            st.markdown(f"{idx}. {step}")
+        st.code(
+            f"RCA: {rb_incident.get('hypothesis', 'N/A')}\n"
+            f"Recommended Action: {rb_incident.get('recommended_action', 'N/A')}\n"
+            f"Confidence: {rb_incident.get('confidence', 0):.2f}"
+        )
+    else:
+        st.info("Generate or ingest incidents to enable runbook assistant.")
+
+with planner_tab:
+    st.markdown("### Capacity and Risk Planner")
+    p_col1, p_col2, p_col3 = st.columns(3)
+    with p_col1:
+        projected_qps = st.slider("Projected QPS spike (%)", 0, 300, 80)
+    with p_col2:
+        current_error = st.slider("Current error rate (%)", 0.0, 20.0, 2.0)
+    with p_col3:
+        headroom = st.slider("Infra headroom (%)", 0, 100, 35)
+
+    risk_score = (projected_qps * 0.45) + (current_error * 8.0) - (headroom * 0.4)
+    risk_score = max(0.0, min(100.0, risk_score))
+    st.metric("Predicted Incident Risk", f"{risk_score:.1f}%")
+    if risk_score >= 70:
+        st.error("High projected risk. Prepare scale-up + rollback guardrails.")
+    elif risk_score >= 40:
+        st.warning("Moderate risk. Recommend canary release and tighter alerting.")
+    else:
+        st.success("Risk is manageable under current assumptions.")
+
+    rel = reliability_score(len(incidents), crit_count, success_rate)
+    st.metric("Platform Reliability Score", f"{rel:.1f}/100")
+    st.caption("Score combines incident load, critical events, and remediation success rate.")
+
+with architecture_tab:
+    st.markdown("### Self-Healing System Map")
+    st.graphviz_chart(
+        """
+digraph G {
+    rankdir=LR;
+    node [shape=box, style=rounded];
+    Traffic -> "Kubernetes Services";
+    "Kubernetes Services" -> Prometheus;
+    "Kubernetes Services" -> "Log Pipeline";
+    Prometheus -> "Detection Engine";
+    "Log Pipeline" -> "RCA Correlator";
+    "Detection Engine" -> "Decision Engine";
+    "RCA Correlator" -> "Decision Engine";
+    "Decision Engine" -> "Remediation Executor";
+    "Remediation Executor" -> "Kubernetes Services";
+    "Decision Engine" -> "Nexovo Dashboard";
+}
+"""
+    )
+    st.markdown("### SLO Snapshot")
+    slo_df = pd.DataFrame(
+        [
+            {"SLI": "Availability", "Target": "99.9%", "Current": "99.7%"},
+            {"SLI": "p95 Latency", "Target": "< 250ms", "Current": "232ms"},
+            {"SLI": "Error Rate", "Target": "< 1.0%", "Current": "0.8%"},
+            {"SLI": "MTTR", "Target": "< 15 min", "Current": "11 min"},
+        ]
+    )
+    st.dataframe(slo_df, use_container_width=True, hide_index=True)
