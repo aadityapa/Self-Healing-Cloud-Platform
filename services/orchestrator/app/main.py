@@ -1,4 +1,6 @@
+from datetime import datetime
 from typing import Dict, List
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
@@ -6,6 +8,7 @@ from starlette.responses import Response
 
 from .engine import DetectionEngine, PolicyEngine, RemediationEngine, StateStore
 from .models import ActionResult, DetectionResponse, Incident, SignalWindow
+from .models import AuditEvent, IncidentAssignmentRequest
 
 app = FastAPI(title="Self-Healing Orchestrator", version="1.0.0")
 
@@ -54,6 +57,17 @@ def detect_and_heal(signal: SignalWindow) -> DetectionResponse:
     with state.lock:
         state.incidents.insert(0, incident)
         state.actions.insert(0, result)
+        state.audit_events.insert(
+            0,
+            AuditEvent(
+                id=str(uuid4()),
+                incident_id=incident.id,
+                event_type="remediation_executed",
+                actor="system",
+                message=f"Executed action {result.action.value} with success={result.success}",
+                created_at=datetime.utcnow(),
+            ),
+        )
 
     INCIDENTS_TOTAL.labels(service=incident.service, severity=incident.severity.value).inc()
     REMEDIATIONS_TOTAL.labels(
@@ -74,6 +88,11 @@ def list_actions() -> List[ActionResult]:
     return state.actions[:100]
 
 
+@app.get("/v1/audit", response_model=List[AuditEvent])
+def list_audit_events() -> List[AuditEvent]:
+    return state.audit_events[:300]
+
+
 def _get_incident_or_404(incident_id: str) -> Incident:
     for incident in state.incidents:
         if incident.id == incident_id:
@@ -86,6 +105,17 @@ def acknowledge_incident(incident_id: str) -> Dict[str, str]:
     with state.lock:
         incident = _get_incident_or_404(incident_id)
         incident.metadata["acknowledged"] = "true"
+        state.audit_events.insert(
+            0,
+            AuditEvent(
+                id=str(uuid4()),
+                incident_id=incident.id,
+                event_type="acknowledged",
+                actor="dashboard-user",
+                message=f"Incident {incident.id} acknowledged",
+                created_at=datetime.utcnow(),
+            ),
+        )
     return {"status": "ok", "message": f"Incident {incident_id} acknowledged"}
 
 
@@ -95,4 +125,37 @@ def escalate_incident(incident_id: str) -> Dict[str, str]:
         incident = _get_incident_or_404(incident_id)
         incident.metadata["escalated"] = "true"
         incident.metadata["escalated_to"] = "sre-oncall"
+        state.audit_events.insert(
+            0,
+            AuditEvent(
+                id=str(uuid4()),
+                incident_id=incident.id,
+                event_type="escalated",
+                actor="dashboard-user",
+                message=f"Incident {incident.id} escalated to sre-oncall",
+                created_at=datetime.utcnow(),
+            ),
+        )
     return {"status": "ok", "message": f"Incident {incident_id} escalated to SRE on-call"}
+
+
+@app.post("/v1/incidents/{incident_id}/assign")
+def assign_incident_owner(
+    incident_id: str, request: IncidentAssignmentRequest
+) -> Dict[str, str]:
+    with state.lock:
+        incident = _get_incident_or_404(incident_id)
+        incident.metadata["owner"] = request.owner
+        incident.metadata["acknowledged"] = incident.metadata.get("acknowledged", "false")
+        state.audit_events.insert(
+            0,
+            AuditEvent(
+                id=str(uuid4()),
+                incident_id=incident.id,
+                event_type="owner_assigned",
+                actor=request.actor,
+                message=f"Assigned owner `{request.owner}`",
+                created_at=datetime.utcnow(),
+            ),
+        )
+    return {"status": "ok", "message": f"Incident {incident_id} assigned to {request.owner}"}

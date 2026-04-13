@@ -395,6 +395,20 @@ def in_selected_window(iso_timestamp: str, window: str) -> bool:
         return True
 
 
+def incident_sla_minutes(severity: str) -> int:
+    mapping = {"critical": 15, "high": 30, "medium": 60, "low": 120}
+    return mapping.get(str(severity).lower(), 60)
+
+
+def incident_age_minutes(iso_timestamp: str) -> float:
+    try:
+        event_time = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        return max(0.0, (now - event_time).total_seconds() / 60.0)
+    except Exception:
+        return 0.0
+
+
 status_col, _, endpoint_col = st.columns([1, 0.2, 2])
 demo_mode = False
 with status_col:
@@ -424,13 +438,21 @@ try:
 except Exception:
     actions = []
 
+try:
+    audit_events = get_json("/v1/audit")
+except Exception:
+    audit_events = []
+
 if demo_mode and "demo_incidents" not in st.session_state:
     st.session_state["demo_incidents"] = []
 if demo_mode and "demo_actions" not in st.session_state:
     st.session_state["demo_actions"] = []
+if demo_mode and "demo_audit" not in st.session_state:
+    st.session_state["demo_audit"] = []
 if demo_mode:
     incidents = st.session_state["demo_incidents"]
     actions = st.session_state["demo_actions"]
+    audit_events = st.session_state.get("demo_audit", [])
 
 incidents = [i for i in incidents if in_selected_window(i.get("created_at", ""), selected_window)]
 actions = [a for a in actions if in_selected_window(a.get("created_at", ""), selected_window)]
@@ -529,8 +551,17 @@ with right:
                     "message": "Demo mode remediation executed locally in dashboard.",
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }
+                audit = {
+                    "id": str(uuid.uuid4()),
+                    "incident_id": incident["id"],
+                    "event_type": "remediation_executed",
+                    "actor": "demo-system",
+                    "message": f"Executed {incident['recommended_action']} in demo mode",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
                 st.session_state["demo_incidents"] = [incident] + st.session_state["demo_incidents"]
                 st.session_state["demo_actions"] = [action] + st.session_state["demo_actions"]
+                st.session_state["demo_audit"] = [audit] + st.session_state["demo_audit"]
                 st.success("Demo signal processed (no backend needed).")
                 with st.expander("Detection Response", expanded=True):
                     st.json({"incident": incident, "action_result": action, "mode": "demo"})
@@ -560,6 +591,9 @@ with left:
                 "created_at",
             ]
         ]
+        df["age_min"] = df["created_at"].map(incident_age_minutes).round(1)
+        df["sla_min"] = df["severity"].map(incident_sla_minutes)
+        df["sla_breached"] = df["age_min"] > df["sla_min"]
         df["confidence"] = df["confidence"].map(lambda x: f"{x:.2f}")
         st.dataframe(df, use_container_width=True, hide_index=True)
 
@@ -583,6 +617,25 @@ with left:
 
         latest = incidents[0]
         sev = latest.get("severity", "low")
+        breached = int(
+            sum(
+                1
+                for item in incidents
+                if incident_age_minutes(item.get("created_at", ""))
+                > incident_sla_minutes(item.get("severity", "medium"))
+            )
+        )
+        acked = int(
+            sum(
+                1
+                for item in incidents
+                if item.get("metadata", {}).get("acknowledged", "false").lower() == "true"
+            )
+        )
+        b1, b2, b3 = st.columns(3)
+        b1.metric("SLA Breaches", breached)
+        b2.metric("Acknowledged", acked)
+        b3.metric("Unacknowledged", max(0, len(incidents) - acked))
         st.markdown(
             f"<div class='card'><b>Latest RCA:</b> {latest.get('hypothesis', 'n/a')}<br><b>Severity:</b> <span class='sev-{sev}'>{sev.upper()}</span><br><b>Recommended Action:</b> {latest.get('recommended_action', 'n/a')}</div>",
             unsafe_allow_html=True,
@@ -595,11 +648,23 @@ with left:
         }
         selected_key = st.selectbox("Select incident", list(incident_options.keys()))
         selected_incident = incident_options[selected_key]
+        owner_default = selected_incident.get("metadata", {}).get("owner", "sre-oncall")
+        owner_value = st.text_input("Incident owner", value=owner_default)
         action_col1, action_col2 = st.columns(2)
         with action_col1:
             if st.button("Acknowledge Incident", use_container_width=True):
                 if demo_mode:
                     selected_incident.setdefault("metadata", {})["acknowledged"] = "true"
+                    st.session_state["demo_audit"] = [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "incident_id": selected_incident.get("id", ""),
+                            "event_type": "acknowledged",
+                            "actor": "demo-user",
+                            "message": "Incident acknowledged in demo mode",
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ] + st.session_state["demo_audit"]
                     st.success("Incident acknowledged in demo mode.")
                 else:
                     try:
@@ -615,6 +680,16 @@ with left:
                 if demo_mode:
                     selected_incident.setdefault("metadata", {})["escalated"] = "true"
                     selected_incident["metadata"]["escalated_to"] = "sre-oncall"
+                    st.session_state["demo_audit"] = [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "incident_id": selected_incident.get("id", ""),
+                            "event_type": "escalated",
+                            "actor": "demo-user",
+                            "message": "Incident escalated to sre-oncall in demo mode",
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    ] + st.session_state["demo_audit"]
                     st.warning("Incident escalated in demo mode.")
                 else:
                     try:
@@ -625,6 +700,31 @@ with left:
                         st.warning("Incident escalated to on-call.")
                     except Exception as exc:
                         st.error(f"Escalation failed: {exc}")
+        if st.button("Assign Owner", use_container_width=True):
+            if demo_mode:
+                selected_incident.setdefault("metadata", {})["owner"] = owner_value
+                st.session_state["demo_audit"] = [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "incident_id": selected_incident.get("id", ""),
+                        "event_type": "owner_assigned",
+                        "actor": "demo-user",
+                        "message": f"Assigned owner {owner_value} in demo mode",
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                ] + st.session_state["demo_audit"]
+                st.success(f"Assigned to {owner_value} (demo mode).")
+            else:
+                try:
+                    r = httpx.post(
+                        f"{API_BASE}/v1/incidents/{selected_incident.get('id')}/assign",
+                        json={"owner": owner_value, "actor": "dashboard-user"},
+                        timeout=10.0,
+                    )
+                    r.raise_for_status()
+                    st.success(f"Assigned to {owner_value}.")
+                except Exception as exc:
+                    st.error(f"Owner assignment failed: {exc}")
         with st.expander("Detailed incident context", expanded=True):
             st.json(selected_incident)
     else:
@@ -643,8 +743,14 @@ with left:
         st.info("No remediation actions recorded yet.")
 
 st.markdown("## Operations Intelligence Toolkit")
-ops_tab, runbook_tab, planner_tab, architecture_tab = st.tabs(
-    ["Service Intelligence", "Runbook Assistant", "Scenario Planner", "Architecture Map"]
+ops_tab, runbook_tab, planner_tab, architecture_tab, audit_tab = st.tabs(
+    [
+        "Service Intelligence",
+        "Runbook Assistant",
+        "Scenario Planner",
+        "Architecture Map",
+        "Audit Timeline",
+    ]
 )
 
 with ops_tab:
@@ -771,3 +877,15 @@ digraph G {
         ]
     )
     st.dataframe(slo_df, use_container_width=True, hide_index=True)
+
+with audit_tab:
+    st.markdown("### Incident Audit Timeline")
+    if audit_events:
+        adf = pd.DataFrame(audit_events)[
+            ["created_at", "incident_id", "event_type", "actor", "message"]
+        ].copy()
+        adf["created_at"] = pd.to_datetime(adf["created_at"], errors="coerce")
+        adf = adf.sort_values("created_at", ascending=False)
+        st.dataframe(adf, use_container_width=True, hide_index=True)
+    else:
+        st.info("No audit events yet. Perform acknowledge/escalate/assign actions to populate timeline.")

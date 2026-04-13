@@ -57,3 +57,17 @@ class DetectionResponse(BaseModel):
     incident: Optional[Incident]
     action_result: Optional[ActionResult]
     reasons: List[str]
+
+
+class IncidentAssignmentRequest(BaseModel):
+    owner: str
+    actor: str = "dashboard-user"
+
+
+class AuditEvent(BaseModel):
+    id: str
+    incident_id: str
+    event_type: str
+    actor: str
+    message: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)

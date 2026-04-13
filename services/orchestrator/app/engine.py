@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from .models import (
     ActionResult,
+    AuditEvent,
     DetectionResponse,
     Incident,
     RemediationAction,
@@ -21,6 +22,7 @@ from .models import (
 class StateStore:
     incidents: List[Incident] = field(default_factory=list)
     actions: List[ActionResult] = field(default_factory=list)
+    audit_events: List[AuditEvent] = field(default_factory=list)
     lock: Lock = field(default_factory=Lock)
 
 
