@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 from starlette.responses import Response
 
@@ -72,3 +72,27 @@ def list_incidents() -> List[Incident]:
 @app.get("/v1/actions", response_model=List[ActionResult])
 def list_actions() -> List[ActionResult]:
     return state.actions[:100]
+
+
+def _get_incident_or_404(incident_id: str) -> Incident:
+    for incident in state.incidents:
+        if incident.id == incident_id:
+            return incident
+    raise HTTPException(status_code=404, detail="Incident not found")
+
+
+@app.post("/v1/incidents/{incident_id}/ack")
+def acknowledge_incident(incident_id: str) -> Dict[str, str]:
+    with state.lock:
+        incident = _get_incident_or_404(incident_id)
+        incident.metadata["acknowledged"] = "true"
+    return {"status": "ok", "message": f"Incident {incident_id} acknowledged"}
+
+
+@app.post("/v1/incidents/{incident_id}/escalate")
+def escalate_incident(incident_id: str) -> Dict[str, str]:
+    with state.lock:
+        incident = _get_incident_or_404(incident_id)
+        incident.metadata["escalated"] = "true"
+        incident.metadata["escalated_to"] = "sre-oncall"
+    return {"status": "ok", "message": f"Incident {incident_id} escalated to SRE on-call"}

@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pandas as pd
@@ -215,6 +215,10 @@ with st.sidebar:
     selected_severity = st.selectbox(
         "Filter severity", ["all", "critical", "high", "medium", "low"], index=0
     )
+    selected_window = st.selectbox(
+        "Time window", ["last_1h", "last_6h", "last_24h", "last_7d", "all_time"], index=2
+    )
+    only_open = st.toggle("Only unacknowledged incidents", value=False)
     show_marketing = st.toggle("Show SaaS hero section", value=True)
     st.markdown("---")
     st.caption("Use this panel to tune views and run scenario simulations.")
@@ -372,6 +376,25 @@ def reliability_score(incidents_count: int, critical_count: int, success_rate: f
     return max(0.0, min(100.0, base - penalty))
 
 
+def in_selected_window(iso_timestamp: str, window: str) -> bool:
+    if window == "all_time":
+        return True
+    if not iso_timestamp:
+        return False
+    try:
+        event_time = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        delta_map = {
+            "last_1h": timedelta(hours=1),
+            "last_6h": timedelta(hours=6),
+            "last_24h": timedelta(hours=24),
+            "last_7d": timedelta(days=7),
+        }
+        return event_time >= (now - delta_map.get(window, timedelta(hours=24)))
+    except Exception:
+        return True
+
+
 status_col, _, endpoint_col = st.columns([1, 0.2, 2])
 demo_mode = False
 with status_col:
@@ -409,11 +432,19 @@ if demo_mode:
     incidents = st.session_state["demo_incidents"]
     actions = st.session_state["demo_actions"]
 
+incidents = [i for i in incidents if in_selected_window(i.get("created_at", ""), selected_window)]
+actions = [a for a in actions if in_selected_window(a.get("created_at", ""), selected_window)]
+
 if selected_service.strip():
     incidents = [i for i in incidents if i.get("service", "").lower() == selected_service.strip().lower()]
 
 if selected_severity != "all":
     incidents = [i for i in incidents if i.get("severity") == selected_severity]
+
+if only_open:
+    incidents = [
+        i for i in incidents if i.get("metadata", {}).get("acknowledged", "false").lower() != "true"
+    ]
 
 crit_count = sum(1 for i in incidents if i.get("severity") == "critical")
 success_count = sum(1 for a in actions if a.get("success"))
@@ -424,6 +455,17 @@ kpi1.metric("Active Incidents", len(incidents))
 kpi2.metric("Critical Incidents", crit_count)
 kpi3.metric("Remediation Actions", len(actions))
 kpi4.metric("Action Success Rate", f"{success_rate:.1f}%")
+
+if incidents:
+    tdf = pd.DataFrame(incidents)[["created_at", "severity", "confidence"]].copy()
+    tdf["created_at"] = pd.to_datetime(tdf["created_at"], errors="coerce")
+    tdf = tdf.dropna(subset=["created_at"]).sort_values("created_at")
+    if not tdf.empty:
+        tdf["incident_count"] = 1
+        tdf["critical_count"] = (tdf["severity"] == "critical").astype(int)
+        trend = tdf.set_index("created_at")[["incident_count", "critical_count", "confidence"]]
+        st.markdown("#### KPI Trends")
+        st.line_chart(trend)
 
 cpu_avg = 0.0
 mem_avg = 0.0
@@ -553,6 +595,36 @@ with left:
         }
         selected_key = st.selectbox("Select incident", list(incident_options.keys()))
         selected_incident = incident_options[selected_key]
+        action_col1, action_col2 = st.columns(2)
+        with action_col1:
+            if st.button("Acknowledge Incident", use_container_width=True):
+                if demo_mode:
+                    selected_incident.setdefault("metadata", {})["acknowledged"] = "true"
+                    st.success("Incident acknowledged in demo mode.")
+                else:
+                    try:
+                        r = httpx.post(
+                            f"{API_BASE}/v1/incidents/{selected_incident.get('id')}/ack", timeout=10.0
+                        )
+                        r.raise_for_status()
+                        st.success("Incident acknowledged.")
+                    except Exception as exc:
+                        st.error(f"Acknowledge failed: {exc}")
+        with action_col2:
+            if st.button("Escalate to On-call", use_container_width=True):
+                if demo_mode:
+                    selected_incident.setdefault("metadata", {})["escalated"] = "true"
+                    selected_incident["metadata"]["escalated_to"] = "sre-oncall"
+                    st.warning("Incident escalated in demo mode.")
+                else:
+                    try:
+                        r = httpx.post(
+                            f"{API_BASE}/v1/incidents/{selected_incident.get('id')}/escalate", timeout=10.0
+                        )
+                        r.raise_for_status()
+                        st.warning("Incident escalated to on-call.")
+                    except Exception as exc:
+                        st.error(f"Escalation failed: {exc}")
         with st.expander("Detailed incident context", expanded=True):
             st.json(selected_incident)
     else:
