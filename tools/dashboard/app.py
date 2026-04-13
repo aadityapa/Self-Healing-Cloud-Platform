@@ -20,9 +20,9 @@ def inject_theme(theme: str) -> None:
         "linear-gradient(165deg, #050816 0%, #0b1220 45%, #0b1024 100%)"
     )
     text_color = "#e2e8f0"
-    card_bg = "linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.72))"
-    border = "rgba(148, 163, 184, 0.22)"
-    hero_sub = "#bfdbfe"
+    card_bg = "linear-gradient(145deg, rgba(15,23,42,0.97), rgba(30,41,59,0.78))"
+    border = "rgba(148, 163, 184, 0.20)"
+    hero_sub = "#fcd34d"
     if is_light:
         bg = (
             "radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.14), transparent 35%),"
@@ -56,7 +56,7 @@ def inject_theme(theme: str) -> None:
     .main {{color: {text_color};}}
     .stApp {{background: {bg};}}
     .hero {{
-        background: linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(99,102,241,0.18) 45%, rgba(14,165,233,0.14) 100%);
+        background: linear-gradient(135deg, rgba(245,158,11,0.20) 0%, rgba(251,191,36,0.16) 45%, rgba(56,189,248,0.10) 100%);
         border: 1px solid {border};
         border-radius: 18px;
         padding: 18px 22px;
@@ -134,7 +134,7 @@ def inject_theme(theme: str) -> None:
         padding: 12px 14px;
         margin-bottom: 10px;
     }}
-    .steps b {{color: #38bdf8;}}
+    .steps b {{color: #fbbf24;}}
     .selling-grid {{
         display: grid;
         grid-template-columns: repeat(3, minmax(0,1fr));
@@ -149,12 +149,12 @@ def inject_theme(theme: str) -> None:
         box-shadow: 0 14px 26px rgba(2, 6, 23, 0.18);
         transition: transform 0.22s ease, border-color 0.22s ease;
     }}
-    .plan:hover {{transform: translateY(-5px); border-color: #38bdf8;}}
+    .plan:hover {{transform: translateY(-5px); border-color: #f59e0b;}}
     .plan-price {{font-size: 1.35rem; font-weight: 800; margin-top: 6px;}}
     .chip {{
         display: inline-block;
-        border: 1px solid #38bdf8;
-        color: #38bdf8;
+        border: 1px solid #f59e0b;
+        color: #f59e0b;
         border-radius: 999px;
         padding: 2px 8px;
         font-size: 0.72rem;
@@ -162,7 +162,7 @@ def inject_theme(theme: str) -> None:
         vertical-align: middle;
     }}
     .cta {{
-        background: linear-gradient(90deg, #2563eb, #06b6d4, #4f46e5);
+        background: linear-gradient(90deg, #f59e0b, #f97316, #0ea5e9);
         background-size: 240% 240%;
         color: white;
         border-radius: 12px;
@@ -224,7 +224,7 @@ if auto_refresh:
 st.markdown(
     """
 <div class='topnav'>
-  <div class='nav-brand'>NEXUS HEALING CLOUD</div>
+  <div class='nav-brand'>NEXOVO HELLING CLOUD</div>
   <div class='nav-links'>Platform | AI Engine | Security | Pricing | Docs</div>
 </div>
 """,
@@ -235,8 +235,8 @@ if show_marketing:
     st.markdown(
         """
 <div class='hero'>
-  <p class='hero-title'>3D Cloud Operations Console</p>
-  <p class='hero-sub'>Modern AI-SRE command center for detection, RCA, and autonomous remediation.</p>
+  <p class='hero-title'>Nexovo Helling Cloud Platform</p>
+  <p class='hero-sub'>Building scalable digital systems for the next generation.</p>
 </div>
 <div class='cloud-3d'></div>
 <div class='node-wrap'>
@@ -253,10 +253,10 @@ if show_marketing:
   </svg>
 </div>
 <div class='feature-grid'>
-  <div class='feature'><b>Predictive Healing</b><br/>Forecast risk before outage impact.</div>
+  <div class='feature'><b>Real-Time Intelligence</b><br/>Actionable signal detection for smarter decisions.</div>
   <div class='feature'><b>AI RCA</b><br/>Correlate metrics, logs, and events in seconds.</div>
-  <div class='feature'><b>Safe Automation</b><br/>Guardrails and confidence-based execution.</div>
-  <div class='feature'><b>SRE Visibility</b><br/>Single-pane incident and action telemetry.</div>
+  <div class='feature'><b>Seamless Integration</b><br/>Connect your stack and automate every workflow.</div>
+  <div class='feature'><b>Measurable Impact</b><br/>Track remediation success and operational ROI.</div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -280,7 +280,7 @@ if show_marketing:
     Multi-cluster, policy guardrails, and dedicated reliability advisory.
   </div>
 </div>
-<div class='cta'>Book Live Demo | Launch Autonomous Healing</div>
+<div class='cta'>Book a Strategy Call | Scale with Nexovo</div>
 """,
         unsafe_allow_html=True,
     )
@@ -288,7 +288,7 @@ if show_marketing:
         """
 <div class='steps'>
   <b>How it works:</b><br/>
-  1) Observe metrics/logs/events -> 2) Detect anomaly -> 3) RCA hypothesis -> 4) Safe remediation -> 5) Learn from outcome
+  1) Observe metrics/logs/events -> 2) Detect anomaly -> 3) RCA hypothesis -> 4) Safe remediation -> 5) Learn and improve
 </div>
 """,
         unsafe_allow_html=True,
@@ -336,6 +336,9 @@ with status_col:
         health = {"status": "unreachable"}
         demo_mode = True
         st.warning("Orchestrator Offline (Dashboard running in demo mode)")
+        st.caption(
+            "To switch to live mode, deploy orchestrator API on Render and set Streamlit secret `ORCHESTRATOR_URL` to that public URL."
+        )
 with endpoint_col:
     st.markdown(
         f"<div class='card'><b>Connected API:</b> {API_BASE}<br><b>Status:</b> {health.get('status', 'unknown')}<div class='tiny'>Live AI remediation control plane link active.</div></div>",

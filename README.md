@@ -97,6 +97,12 @@ After push, this folder is linked to your GitHub project.
 - `.github/pull_request_template.md`
 - `.github/ISSUE_TEMPLATE/*`
 
+## Render + Streamlit Live Setup
+
+- Deploy orchestrator API with `render.yaml`
+- Set Streamlit secret `ORCHESTRATOR_URL` to Render service URL
+- Full steps: `docs/RENDER_DEPLOYMENT.md`
+
 ## Next Enterprise Steps
 
 - Add Kafka + Flink streaming feature pipeline
