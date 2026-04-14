@@ -473,7 +473,6 @@ if st.session_state.get("selected_plan"):
     )
 
 view = st.session_state["nexovo_view"]
-show_ops_dashboard = (view == "console") or (not show_marketing)
 
 if show_marketing and view == "home":
     st.markdown(
@@ -858,17 +857,12 @@ if show_marketing and st.session_state.get("nexovo_view") == "integrations":
             except Exception as exc:
                 st.error(f"Save failed: {exc}")
 
-if not show_ops_dashboard:
-    if show_marketing and view == "integrations":
-        st.info(
-            "Open **Console** to run incidents, simulate production signals, and validate "
-            "webhook-driven escalations end-to-end."
-        )
-    if show_marketing and view in ("home", "pricing", "contact"):
-        st.caption(
-            "Tip: use **Console** in the top navigation for live detection, remediation, and exports."
-        )
-    st.stop()
+if show_marketing and view in ("home", "pricing", "contact", "integrations"):
+    st.divider()
+    st.markdown("### Live operations console")
+    st.caption(
+        "KPIs, incident feed, simulator, and intelligence toolkit — scroll to explore without switching tabs."
+    )
 
 st.markdown("<div class='console-shell'>", unsafe_allow_html=True)
 
