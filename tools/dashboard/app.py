@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 API_BASE = os.getenv(
     "ORCHESTRATOR_URL", "https://nexovo-helling-orchestrator.onrender.com"
@@ -16,6 +17,136 @@ if "nexovo_view" not in st.session_state:
     st.session_state["nexovo_view"] = "home"
 if "selected_plan" not in st.session_state:
     st.session_state["selected_plan"] = None
+
+# Interactive Three.js globe (iframe). CDN loads Three.js in the component sandbox.
+THREE_GLOBE_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+    #globe-root { width: 100%; height: 300px; display: block; }
+    canvas { display: block; width: 100% !important; height: 100% !important; outline: none; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="globe-root"></div>
+  <script>
+  (function () {
+    var container = document.getElementById("globe-root");
+    var h = 300;
+    var w = Math.max(container.clientWidth || 800, 320);
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(42, w / h, 0.08, 120);
+    camera.position.set(0, 0, 3.45);
+    var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    var group = new THREE.Group();
+    var geo = new THREE.IcosahedronGeometry(1, 3);
+    var mat = new THREE.MeshPhongMaterial({
+      color: 0x0ea5e9,
+      emissive: 0x172554,
+      shininess: 95,
+      specular: 0xaaddff
+    });
+    var mesh = new THREE.Mesh(geo, mat);
+    var wireMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 });
+    var wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), wireMat);
+    group.add(mesh);
+    group.add(wire);
+
+    var nodeGeo = new THREE.SphereGeometry(0.042, 10, 10);
+    var nodeMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee });
+    for (var i = 0; i < 36; i++) {
+      var nm = new THREE.Mesh(nodeGeo, nodeMat.clone());
+      var ang = (i / 36) * Math.PI * 2;
+      var phi = Math.PI * 0.35 + Math.sin(i * 1.3) * 0.35;
+      var rr = 1.14;
+      nm.position.set(
+        rr * Math.sin(phi) * Math.cos(ang),
+        rr * Math.cos(phi),
+        rr * Math.sin(phi) * Math.sin(ang)
+      );
+      group.add(nm);
+    }
+    scene.add(group);
+
+    var pCount = 720;
+    var positions = new Float32Array(pCount * 3);
+    for (var j = 0; j < pCount; j++) {
+      var rr = 1.28 + Math.random() * 0.55;
+      var t = Math.random() * Math.PI * 2;
+      var p = Math.acos(2 * Math.random() - 1);
+      positions[j * 3] = rr * Math.sin(p) * Math.cos(t);
+      positions[j * 3 + 1] = rr * Math.sin(p) * Math.sin(t);
+      positions[j * 3 + 2] = rr * Math.cos(p);
+    }
+    var pGeom = new THREE.BufferGeometry();
+    pGeom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    var pMat = new THREE.PointsMaterial({
+      color: 0x38bdf8,
+      size: 0.038,
+      transparent: true,
+      opacity: 0.88,
+      sizeAttenuation: true
+    });
+    var points = new THREE.Points(pGeom, pMat);
+    scene.add(points);
+
+    scene.add(new THREE.AmbientLight(0x6688cc, 0.52));
+    var d1 = new THREE.DirectionalLight(0xffffff, 1.05);
+    d1.position.set(4, 6, 7);
+    scene.add(d1);
+    var d2 = new THREE.DirectionalLight(0x38bdf8, 0.42);
+    d2.position.set(-4, -3, -5);
+    scene.add(d2);
+
+    var mx = 0, my = 0, tmx = 0, tmy = 0;
+    var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    renderer.domElement.addEventListener("mousemove", function (e) {
+      var rect = renderer.domElement.getBoundingClientRect();
+      tmx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      tmy = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    });
+    renderer.domElement.addEventListener("mouseleave", function () { tmx = 0; tmy = 0; });
+    renderer.domElement.style.cursor = "grab";
+
+    var baseY = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      mx += (tmx - mx) * 0.07;
+      my += (tmy - my) * 0.07;
+      if (!reducedMotion) baseY += 0.0042;
+      group.rotation.y = baseY + mx * 0.55;
+      group.rotation.x = my * 0.38;
+      points.rotation.y = baseY * 0.65 + 0.15;
+      points.rotation.x = my * 0.12;
+      camera.position.x = mx * 0.22;
+      camera.position.y = my * 0.18;
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", function () {
+      var nw = Math.max(container.clientWidth || 800, 320);
+      camera.aspect = nw / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(nw, h);
+    });
+  })();
+  </script>
+</body>
+</html>
+"""
 
 
 def inject_theme(theme: str) -> None:
@@ -493,6 +624,11 @@ def inject_theme(theme: str) -> None:
         padding: 8px 10px 14px 10px;
         box-shadow: 0 16px 32px rgba(2,6,23,0.16);
     }}
+    iframe[title="streamlit.components.v1.html"] {{
+        border: none !important;
+        border-radius: 18px;
+        box-shadow: 0 24px 56px rgba(2, 6, 23, 0.35), 0 0 60px rgba(14, 165, 233, 0.12);
+    }}
     @media (prefers-reduced-motion: reduce) {{
         .stApp::before,
         .topnav,
@@ -684,14 +820,13 @@ if show_marketing and view == "home":
   <p class='hero-title'>Nexovo Helling Cloud Platform</p>
   <p class='hero-sub'>Building scalable digital systems for the next generation.</p>
 </div>
-<div class='orb-stage'>
-  <div class='orb-halo'></div>
-  <div class='orb-ring'></div>
-  <div class='cloud-3d'>
-    <div class='orb-shine'></div>
-    <div class='orb-cavity'></div>
-  </div>
-</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.caption("Interactive 3D globe — move the pointer to explore.")
+    components.html(THREE_GLOBE_HTML, height=320, scrolling=False)
+    st.markdown(
+        """
 <div class='node-wrap'>
   <svg class='node-svg' viewBox='0 0 960 150' width='100%' height='150' xmlns='http://www.w3.org/2000/svg'>
     <defs>
