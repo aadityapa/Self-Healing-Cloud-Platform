@@ -41,6 +41,12 @@ def inject_theme(theme: str) -> None:
         border = "rgba(100, 116, 139, 0.25)"
         hero_sub = "#1d4ed8"
 
+    console_shell_bg = (
+        "linear-gradient(180deg, rgba(15,23,42,0.4) 0%, transparent 140px)"
+        if not is_light
+        else "linear-gradient(180deg, rgba(241,245,249,0.95) 0%, rgba(255,255,255,0.4) 100%)"
+    )
+
     st.markdown(
         f"""
 <style>
@@ -210,6 +216,139 @@ def inject_theme(theme: str) -> None:
     @keyframes heroFloat {{0%,100% {{transform: rotateX(2deg) translateZ(8px);}} 50% {{transform: rotateX(4deg) translateZ(14px);}}}}
     @keyframes cardFloat {{0%,100% {{transform: translateZ(0);}} 50% {{transform: translateZ(6px);}}}}
     @keyframes shift {{0% {{background-position: 0% 50%;}} 50% {{background-position: 100% 50%;}} 100% {{background-position: 0% 50%;}}}}
+    .landing-hero {{
+        background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(56,189,248,0.08) 50%, rgba(99,102,241,0.06) 100%);
+        border: 1px solid {border};
+        border-radius: 22px;
+        padding: 28px 32px 32px 32px;
+        margin-bottom: 18px;
+        box-shadow: 0 32px 64px rgba(2, 6, 23, 0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+        backdrop-filter: blur(16px);
+        transform-style: preserve-3d;
+        transform: rotateX(1.5deg) translateZ(10px);
+    }}
+    .kicker {{
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #38bdf8;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }}
+    .headline-xl {{
+        font-size: clamp(1.45rem, 2.4vw, 2.05rem);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0 0 12px 0;
+        letter-spacing: -0.02em;
+    }}
+    .lede {{
+        font-size: 1.02rem;
+        line-height: 1.55;
+        opacity: 0.88;
+        max-width: 52rem;
+        margin: 0 0 18px 0;
+    }}
+    .trust-row {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 18px 0 22px 0;
+    }}
+    .trust-pill {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        box-shadow: 0 8px 20px rgba(2,6,23,0.15);
+    }}
+    .pillar-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin: 16px 0 20px 0;
+    }}
+    .pillar {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: 0 16px 32px rgba(2,6,23,0.2);
+        transform: translateZ(0);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }}
+    .pillar:hover {{
+        transform: translateY(-4px) translateZ(8px);
+        box-shadow: 0 22px 44px rgba(2,6,23,0.28);
+    }}
+    .pillar h4 {{ margin: 0 0 8px 0; font-size: 0.95rem; }}
+    .pillar p {{ margin: 0; font-size: 0.86rem; opacity: 0.88; line-height: 1.45; }}
+    .mini-hero {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 18px;
+        padding: 20px 24px;
+        margin-bottom: 16px;
+        box-shadow: 0 20px 40px rgba(2,6,23,0.22);
+    }}
+    .mini-hero h2 {{ margin: 0 0 6px 0; font-size: 1.35rem; }}
+    .mini-hero p {{ margin: 0; opacity: 0.85; }}
+    .roi-panel {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 18px;
+        padding: 22px 24px;
+        margin-bottom: 16px;
+        box-shadow: 0 24px 48px rgba(2,6,23,0.25);
+    }}
+    .roi-panel h3 {{ margin: 0 0 6px 0; }}
+    .roi-panel .sub {{ opacity: 0.85; font-size: 0.9rem; margin-bottom: 16px; }}
+    .roi-big {{
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #38bdf8;
+        margin: 8px 0;
+    }}
+    .sales-grid {{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 8px;
+    }}
+    .sales-card {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 16px;
+        padding: 20px 22px;
+        min-height: 140px;
+        box-shadow: 0 18px 36px rgba(2,6,23,0.2);
+    }}
+    .sales-card h4 {{ margin: 0 0 10px 0; font-size: 1.05rem; }}
+    .sales-card p {{ margin: 0; font-size: 0.88rem; opacity: 0.88; line-height: 1.45; }}
+    .console-shell {{
+        border: 1px solid {border};
+        border-radius: 18px;
+        padding: 16px 18px 20px 18px;
+        margin-top: 8px;
+        background: {console_shell_bg};
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px rgba(2,6,23,0.18);
+    }}
+    .section-label {{
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0.65;
+        margin-bottom: 6px;
+    }}
+    div[data-testid="stTabs"] {{
+        background: {card_bg};
+        border: 1px solid {border};
+        border-radius: 14px;
+        padding: 8px 10px 14px 10px;
+        box-shadow: 0 16px 32px rgba(2,6,23,0.16);
+    }}
 </style>
 """,
         unsafe_allow_html=True,
@@ -236,8 +375,50 @@ def gauge(label: str, value: float, max_value: float = 100.0) -> None:
         unsafe_allow_html=True,
     )
 
+
+def render_plan_cards(key_suffix: str = "") -> None:
+    suf = key_suffix
+    st.markdown("### Plans that scale with you")
+    pc1, pc2, pc3 = st.columns(3)
+    with pc1:
+        st.markdown(
+            "<div class='plan-card-wrap'><b>Starter Ops</b><div class='plan-price'>$49<small>/mo</small></div>"
+            "<p>Small teams building AI-assisted incident response.</p></div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Choose Starter", use_container_width=True, key=f"choose_starter{suf}"):
+            st.session_state["selected_plan"] = "Starter Ops ($49/mo)"
+            st.session_state["nexovo_view"] = "console"
+            st.balloons()
+            st.rerun()
+    with pc2:
+        st.markdown(
+            "<div class='plan-card-wrap'><b>Growth SRE</b> <span class='chip'>Popular</span>"
+            "<div class='plan-price'>$199<small>/mo</small></div>"
+            "<p>Full anomaly, RCA, and safe auto-remediation.</p></div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Choose Growth", use_container_width=True, key=f"choose_growth{suf}"):
+            st.session_state["selected_plan"] = "Growth SRE ($199/mo)"
+            st.session_state["nexovo_view"] = "console"
+            st.balloons()
+            st.rerun()
+    with pc3:
+        st.markdown(
+            "<div class='plan-card-wrap'><b>Enterprise Autonomous</b>"
+            "<div class='plan-price'>Custom</div>"
+            "<p>Multi-cluster guardrails and dedicated reliability advisory.</p></div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("Contact Sales", use_container_width=True, key=f"choose_ent{suf}"):
+            st.session_state["selected_plan"] = "Enterprise (custom)"
+            st.session_state["nexovo_view"] = "contact"
+            st.rerun()
+
+
 with st.sidebar:
-    st.markdown("## Control Center")
+    st.markdown("## Operations")
+    st.caption("Filters, theme, and refresh for the live console.")
     if st.button("Refresh now", use_container_width=True):
         st.rerun()
     theme_mode = st.selectbox("Theme", ["dark", "light"], index=0)
@@ -259,7 +440,7 @@ if auto_refresh:
     st.caption("Auto refresh enabled. Click 'Refresh now' every few seconds.")
 
 st.markdown("<div class='topnav'>", unsafe_allow_html=True)
-nav_b1, nav_b2, nav_b3, nav_b4, nav_b5, nav_b6 = st.columns([2.2, 1, 1, 1, 1, 1])
+nav_b1, nav_b2, nav_b3, nav_b4, nav_b5, nav_b6, nav_b7 = st.columns([2.0, 1, 1, 1, 1, 1, 1])
 with nav_b1:
     st.markdown("<span class='nav-brand'>NEXOVO HELLING CLOUD</span>", unsafe_allow_html=True)
 with nav_b2:
@@ -279,6 +460,10 @@ with nav_b5:
         st.session_state["nexovo_view"] = "integrations"
         st.rerun()
 with nav_b6:
+    if st.button("Contact", use_container_width=True, key="nav_contact"):
+        st.session_state["nexovo_view"] = "contact"
+        st.rerun()
+with nav_b7:
     st.link_button("Docs", "https://technexovo.com/blog", use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -288,7 +473,51 @@ if st.session_state.get("selected_plan"):
     )
 
 view = st.session_state["nexovo_view"]
-if show_marketing and view in ("home", "pricing"):
+show_ops_dashboard = (view == "console") or (not show_marketing)
+
+if show_marketing and view == "home":
+    st.markdown(
+        """
+<div class='landing-hero'>
+  <div class='kicker'>Enterprise reliability · AI-native operations</div>
+  <h1 class='headline-xl'>Cut incident MTTR and operational risk with AI-assisted self-healing</h1>
+  <p class='lede'>Unify detection, root-cause analysis, and safe remediation across Kubernetes and cloud-native workloads. One control plane for SRE, platform, and leadership—with full audit trails and webhook integrations.</p>
+  <div class='trust-row'>
+    <span class='trust-pill'>Faster MTTR</span>
+    <span class='trust-pill'>99.9% uptime focus</span>
+    <span class='trust-pill'>Slack · Jira · Email</span>
+    <span class='trust-pill'>Audit-ready</span>
+  </div>
+</div>
+<div class='pillar-grid'>
+  <div class='pillar'><h4>Why Nexovo</h4><p>Signal-rich detection, explainable RCA, and guardrailed automation so teams ship faster without fear.</p></div>
+  <div class='pillar'><h4>Why enterprises</h4><p>Executive-grade visibility, incident ownership, escalation paths, and integration with your existing toolchain.</p></div>
+  <div class='pillar'><h4>Why now</h4><p>Incidents are expensive; every minute of downtime compounds cost, churn, and compliance risk.</p></div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    h1, h2, h3, h4 = st.columns(4)
+    with h1:
+        st.link_button(
+            "Book a demo",
+            "https://technexovo.com/contact",
+            use_container_width=True,
+            type="primary",
+        )
+    with h2:
+        if st.button("Open console", use_container_width=True, key="hero_open_console"):
+            st.session_state["nexovo_view"] = "console"
+            st.rerun()
+    with h3:
+        if st.button("View pricing", use_container_width=True, key="hero_pricing"):
+            st.session_state["nexovo_view"] = "pricing"
+            st.rerun()
+    with h4:
+        if st.button("ROI & contact", use_container_width=True, key="hero_contact"):
+            st.session_state["nexovo_view"] = "contact"
+            st.rerun()
+
     st.markdown("<div class='scene-3d'>", unsafe_allow_html=True)
     st.markdown(
         """
@@ -321,41 +550,7 @@ if show_marketing and view in ("home", "pricing"):
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("### Plans that scale with you")
-    pc1, pc2, pc3 = st.columns(3)
-    with pc1:
-        st.markdown(
-            "<div class='plan-card-wrap'><b>Starter Ops</b><div class='plan-price'>$49<small>/mo</small></div>"
-            "<p>Small teams building AI-assisted incident response.</p></div>",
-            unsafe_allow_html=True,
-        )
-        if st.button("Choose Starter", use_container_width=True, key="choose_starter"):
-            st.session_state["selected_plan"] = "Starter Ops ($49/mo)"
-            st.session_state["nexovo_view"] = "console"
-            st.balloons()
-            st.rerun()
-    with pc2:
-        st.markdown(
-            "<div class='plan-card-wrap'><b>Growth SRE</b> <span class='chip'>Popular</span>"
-            "<div class='plan-price'>$199<small>/mo</small></div>"
-            "<p>Full anomaly, RCA, and safe auto-remediation.</p></div>",
-            unsafe_allow_html=True,
-        )
-        if st.button("Choose Growth", use_container_width=True, key="choose_growth"):
-            st.session_state["selected_plan"] = "Growth SRE ($199/mo)"
-            st.session_state["nexovo_view"] = "console"
-            st.balloons()
-            st.rerun()
-    with pc3:
-        st.markdown(
-            "<div class='plan-card-wrap'><b>Enterprise Autonomous</b>"
-            "<div class='plan-price'>Custom</div>"
-            "<p>Multi-cluster guardrails and dedicated reliability advisory.</p></div>",
-            unsafe_allow_html=True,
-        )
-        if st.button("Contact Sales", use_container_width=True, key="choose_ent"):
-            st.session_state["selected_plan"] = "Enterprise (custom)"
-            st.rerun()
+    render_plan_cards("_home")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -377,6 +572,111 @@ if show_marketing and view in ("home", "pricing"):
 """,
         unsafe_allow_html=True,
     )
+
+if show_marketing and view == "pricing":
+    st.markdown(
+        """
+<div class='mini-hero'>
+  <h2>Pricing that matches your stage</h2>
+  <p>Start small, prove ROI, then scale autonomous remediation with enterprise guardrails.</p>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    render_plan_cards("_price")
+    st.markdown("### Frequently asked questions")
+    with st.expander("What is included in the Growth plan?"):
+        st.write(
+            "Full anomaly detection, RCA correlation, remediation playbooks, audit timeline, "
+            "and webhook integrations for Slack, Jira, and email-style HTTPS endpoints."
+        )
+    with st.expander("Do you support SOC2 / enterprise security reviews?"):
+        st.write(
+            "The platform is designed for audit trails, RBAC-style ownership, and encrypted outbound webhooks. "
+            "Enterprise packages include dedicated security and compliance alignment."
+        )
+    with st.expander("Can we run a pilot?"):
+        st.write("Yes. Book a demo and we will align a pilot scope and success metrics with your team.")
+    st.link_button(
+        "Book a demo — talk to sales",
+        "https://technexovo.com/contact",
+        use_container_width=True,
+        type="primary",
+    )
+
+if show_marketing and view == "contact":
+    st.markdown(
+        """
+<div class='section-label'>Talk to us</div>
+<h2 style='margin-top:0;'>Book a demo, contact sales, or estimate ROI</h2>
+<p style='opacity:0.88;'>Use the calculator to frame a business case. All figures are illustrative; we will validate with your data.</p>
+""",
+        unsafe_allow_html=True,
+    )
+    st.markdown("### ROI estimator")
+    r1, r2 = st.columns(2)
+    with r1:
+        monthly_incidents = st.slider(
+            "P1/P2 incidents per month", 1, 80, 14, help="Major incidents that trigger on-call response."
+        )
+        mttr_before_h = st.slider("Median MTTR today (hours)", 0.25, 12.0, 1.5, 0.25)
+    with r2:
+        hourly_cost = st.slider(
+            "Fully loaded cost per incident hour (USD)", 75, 500, 180)
+        mttr_after_h = st.slider(
+            "Expected MTTR with Nexovo (hours)", 0.1, 6.0, 0.35, 0.05,
+            help="Conservative improvement from faster RCA and automation.",
+        )
+    hours_saved = monthly_incidents * max(0.0, (mttr_before_h - mttr_after_h))
+    monthly_savings = hours_saved * hourly_cost
+    annual_savings = monthly_savings * 12
+    st.markdown(
+        f"""
+<div class='roi-panel'>
+  <h3>Estimated operational impact</h3>
+  <p class='sub'>Hours saved per month: <b>{hours_saved:.1f}</b> · Monthly value: <b>${monthly_savings:,.0f}</b></p>
+  <div class='roi-big'>${annual_savings:,.0f}</div>
+  <p style='margin:0; opacity:0.85;'>Illustrative annual savings from reduced response time (before/after MTTR).</p>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div class='section-label' style='margin-top:18px;'>Next steps</div>", unsafe_allow_html=True)
+    s1, s2 = st.columns(2)
+    with s1:
+        st.markdown(
+            """
+<div class='sales-card'>
+  <h4>Book a demo</h4>
+  <p>Walk through detection, RCA, remediation, and integrations with your stakeholders.</p>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+        st.link_button(
+            "Schedule on technexovo.com",
+            "https://technexovo.com/contact",
+            use_container_width=True,
+            type="primary",
+        )
+    with s2:
+        st.markdown(
+            """
+<div class='sales-card'>
+  <h4>Contact sales</h4>
+  <p>Enterprise pricing, pilots, security reviews, and custom deployment options.</p>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+        st.link_button(
+            "Contact sales",
+            "https://technexovo.com/contact",
+            use_container_width=True,
+        )
+    if st.button("Open live console", use_container_width=True, key="contact_open_console"):
+        st.session_state["nexovo_view"] = "console"
+        st.rerun()
 
 if show_marketing and view == "console":
     st.info("Operations console below — run detection, manage incidents, and review audit trail.")
@@ -505,7 +805,7 @@ with status_col:
         )
 with endpoint_col:
     st.markdown(
-        f"<div class='card'><b>Connected API:</b> {API_BASE}<br><b>Status:</b> {health.get('status', 'unknown')}<div class='tiny'>Live AI remediation control plane link active.</div></div>",
+        f"<div class='card'><b>Control plane API:</b> {API_BASE}<br><b>Status:</b> {health.get('status', 'unknown')}<div class='tiny'>Orchestrator endpoint for detection, remediation, and audit.</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -557,6 +857,20 @@ if show_marketing and st.session_state.get("nexovo_view") == "integrations":
                 st.success("Saved to orchestrator — ack/escalate will notify these endpoints.")
             except Exception as exc:
                 st.error(f"Save failed: {exc}")
+
+if not show_ops_dashboard:
+    if show_marketing and view == "integrations":
+        st.info(
+            "Open **Console** to run incidents, simulate production signals, and validate "
+            "webhook-driven escalations end-to-end."
+        )
+    if show_marketing and view in ("home", "pricing", "contact"):
+        st.caption(
+            "Tip: use **Console** in the top navigation for live detection, remediation, and exports."
+        )
+    st.stop()
+
+st.markdown("<div class='console-shell'>", unsafe_allow_html=True)
 
 try:
     incidents = get_json("/v1/incidents")
@@ -1075,3 +1389,5 @@ with audit_tab:
         st.dataframe(adf, use_container_width=True, hide_index=True)
     else:
         st.info("No audit events yet. Perform acknowledge/escalate/assign actions to populate timeline.")
+
+st.markdown("</div>", unsafe_allow_html=True)
