@@ -66,11 +66,32 @@ def inject_theme(theme: str) -> None:
         margin-bottom: 14px;
         box-shadow: 0 12px 40px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255,255,255,0.08);
         backdrop-filter: blur(12px);
+        animation: navGlow 8s ease-in-out infinite;
     }}
     .nav-brand {{font-weight: 800; letter-spacing: 0.4px; font-size: 1.05rem;}}
     .nav-links {{font-size: 0.88rem; opacity: 0.9;}}
     .main {{color: {text_color};}}
-    .stApp {{background: {bg};}}
+    .stApp {{
+        background: {bg};
+        position: relative;
+    }}
+    .stApp::before {{
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            radial-gradient(ellipse 120% 70% at 12% 15%, rgba(56, 189, 248, 0.14), transparent 55%),
+            radial-gradient(ellipse 90% 60% at 90% 85%, rgba(129, 140, 248, 0.12), transparent 50%),
+            radial-gradient(ellipse 55% 45% at 50% 45%, rgba(14, 165, 233, 0.07), transparent 62%);
+        transform-origin: center center;
+        animation: ambientShift 22s ease-in-out infinite alternate;
+    }}
+    [data-testid="stAppViewContainer"] {{
+        position: relative;
+        z-index: 1;
+    }}
     .hero {{
         background: linear-gradient(135deg, rgba(245,158,11,0.22) 0%, rgba(251,191,36,0.18) 45%, rgba(56,189,248,0.12) 100%);
         border: 1px solid {border};
@@ -125,6 +146,11 @@ def inject_theme(theme: str) -> None:
         border-radius: 14px;
         padding: 12px;
         box-shadow: 0 16px 30px rgba(2, 6, 23, 0.20), inset 0 1px 0 rgba(255,255,255,0.04);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+    }}
+    div[data-testid="stMetric"]:hover {{
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 22px 44px rgba(14, 165, 233, 0.18), inset 0 1px 0 rgba(255,255,255,0.08);
     }}
     .card {{
         background: {card_bg};
@@ -134,28 +160,112 @@ def inject_theme(theme: str) -> None:
         margin-bottom: 12px;
         box-shadow: 0 14px 28px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255,255,255,0.04);
         backdrop-filter: blur(8px);
+        transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+    }}
+    .card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.24), inset 0 1px 0 rgba(255,255,255,0.07);
+        border-color: rgba(56, 189, 248, 0.35);
     }}
     .sev-critical {{color: #ef4444; font-weight: 700;}}
     .sev-high {{color: #f97316; font-weight: 700;}}
     .sev-medium {{color: #eab308; font-weight: 700;}}
     .sev-low {{color: #22c55e; font-weight: 700;}}
     .tiny {{color: #60a5fa; font-size: 0.84rem; margin-top: 4px;}}
-    .node-wrap {{height: 130px; margin-bottom: 8px;}}
-    .node-svg circle {{animation: pulse 3.6s ease-in-out infinite;}}
-    .node-svg line {{stroke-dasharray: 4 5; animation: move 7s linear infinite;}}
-    .cloud-3d {{
-        width: 140px;
-        height: 140px;
-        margin: 12px auto 16px auto;
+    .orb-stage {{
+        position: relative;
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 8px auto 12px auto;
+        perspective: 900px;
+        animation: stageBob 8s ease-in-out infinite;
+    }}
+    .orb-halo {{
+        position: absolute;
+        width: 240px;
+        height: 240px;
         border-radius: 50%;
-        background: radial-gradient(circle at 28% 28%, #bae6fd, #0ea5e9 45%, #1e3a8a 88%, #0f172a 100%);
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.45) 0%, rgba(56, 189, 248, 0.12) 42%, transparent 70%);
+        filter: blur(14px);
+        animation: haloPulse 5s ease-in-out infinite;
+        pointer-events: none;
+    }}
+    .orb-ring {{
+        position: absolute;
+        width: 188px;
+        height: 188px;
+        border-radius: 50%;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        box-shadow: 0 0 50px rgba(14, 165, 233, 0.25), inset 0 0 30px rgba(56, 189, 248, 0.08);
+        animation: ringSpin 28s linear infinite;
+        pointer-events: none;
+    }}
+    .orb-ring::after {{
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1px dashed rgba(129, 140, 248, 0.25);
+        animation: ringSpin 40s linear infinite reverse;
+    }}
+    .node-wrap {{
+        height: 150px;
+        margin-bottom: 10px;
+        position: relative;
+        filter: drop-shadow(0 4px 12px rgba(14, 165, 233, 0.15));
+    }}
+    .node-svg .n-line {{
+        stroke-dasharray: 10 14;
+        animation: dashFlow 4s linear infinite;
+    }}
+    .node-svg .n-line:nth-child(2) {{ animation-duration: 5.2s; animation-delay: -0.5s; }}
+    .node-svg .n-line:nth-child(3) {{ animation-duration: 3.8s; animation-delay: -1s; }}
+    .node-svg .n-line:nth-child(4) {{ animation-duration: 4.5s; animation-delay: -0.2s; }}
+    .node-svg .n-node {{
+        animation: nodePulse 2.8s ease-in-out infinite;
+        transform-origin: center;
+        transform-box: fill-box;
+    }}
+    .node-svg .n-node.n-d1 {{ animation-delay: 0s; }}
+    .node-svg .n-node.n-d2 {{ animation-delay: 0.35s; }}
+    .node-svg .n-node.n-d3 {{ animation-delay: 0.7s; }}
+    .node-svg .n-node.n-d4 {{ animation-delay: 1.05s; }}
+    .node-svg .n-node.n-d5 {{ animation-delay: 1.4s; }}
+    .cloud-3d {{
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 28% 22%, rgba(255,255,255,0.92) 0%, rgba(186, 230, 253, 0.45) 8%, transparent 42%),
+          radial-gradient(circle at 72% 78%, rgba(15, 23, 42, 0.9) 0%, transparent 55%),
+          radial-gradient(circle at 30% 35%, #bae6fd, #0ea5e9 45%, #1e40af 78%, #0f172a 100%);
         box-shadow:
-          inset -16px -20px 32px rgba(2,6,23,0.45),
-          inset 14px 18px 28px rgba(255,255,255,0.35),
-          0 32px 64px rgba(14,165,233,0.35),
-          0 0 80px rgba(56,189,248,0.25);
-        animation: spinCloud 14s linear infinite;
+          inset -16px -22px 36px rgba(2,6,23,0.55),
+          inset 16px 20px 32px rgba(255,255,255,0.35),
+          0 36px 72px rgba(14,165,233,0.35),
+          0 0 100px rgba(56,189,248,0.3);
+        animation: spinCloud 20s linear infinite;
         transform-style: preserve-3d;
+    }}
+    .orb-shine {{
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.75), transparent 38%);
+        mix-blend-mode: soft-light;
+        pointer-events: none;
+        animation: shineDrift 6s ease-in-out infinite; 
+    }}
+    .orb-cavity {{
+        position: absolute;
+        inset: 18%;
+        border-radius: 50%;
+        background: radial-gradient(circle at 40% 40%, rgba(0,0,0,0.06), transparent 60%);
+        pointer-events: none;
     }}
     .steps {{
         background: {card_bg};
@@ -209,9 +319,42 @@ def inject_theme(theme: str) -> None:
         animation: shift 6s ease infinite;
         box-shadow: 0 14px 25px rgba(37, 99, 235, 0.4);
     }}
+    @keyframes ambientShift {{
+        0% {{ opacity: 0.88; transform: scale(1); }}
+        50% {{ opacity: 1; transform: scale(1.02); }}
+        100% {{ opacity: 0.92; transform: scale(1.035); }}
+    }}
+    @keyframes navGlow {{
+        0%, 100% {{ box-shadow: 0 12px 40px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 rgba(56,189,248,0); }}
+        50% {{ box-shadow: 0 14px 44px rgba(2, 6, 23, 0.26), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 28px rgba(56,189,248,0.12); }}
+    }}
+    @keyframes haloPulse {{
+        0%, 100% {{ transform: scale(1); opacity: 0.75; }}
+        50% {{ transform: scale(1.08); opacity: 1; }}
+    }}
+    @keyframes ringSpin {{
+        from {{ transform: rotate(0deg); }}
+        to {{ transform: rotate(360deg); }}
+    }}
+    @keyframes dashFlow {{
+        from {{ stroke-dashoffset: 0; }}
+        to {{ stroke-dashoffset: -48; }}
+    }}
+    @keyframes nodePulse {{
+        0%, 100% {{ transform: scale(1); filter: drop-shadow(0 0 4px rgba(56,189,248,0.5)); }}
+        50% {{ transform: scale(1.12); filter: drop-shadow(0 0 12px rgba(129,140,248,0.85)); }}
+    }}
+    @keyframes shineDrift {{
+        0%, 100% {{ opacity: 0.85; transform: translate(0, 0) scale(1); }}
+        50% {{ opacity: 1; transform: translate(4%, -3%) scale(1.03); }}
+    }}
     @keyframes pulse {{0%,100% {{transform: scale(1); opacity: 0.8;}} 50% {{transform: scale(1.08); opacity: 1;}}}}
-    @keyframes move {{from {{stroke-dashoffset: 0;}} to {{stroke-dashoffset: 60;}}}}
-    @keyframes spinCloud {{from {{transform: rotateY(0deg) rotateX(8deg);}} to {{transform: rotateY(360deg) rotateX(8deg);}}}}
+    @keyframes spinCloud {{from {{transform: rotateY(0deg) rotateX(10deg);}} to {{transform: rotateY(360deg) rotateX(10deg);}}}}
+    @keyframes stageBob {{0%,100% {{transform: translateY(0);}} 50% {{transform: translateY(-12px);}}}}
+    @keyframes shellBreath {{
+        0%, 100% {{ box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px rgba(2,6,23,0.18); }}
+        50% {{ box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 28px 52px rgba(14,165,233,0.14); }}
+    }}
     @keyframes cloudBob {{0%,100% {{transform: translateY(0) translateZ(0);}} 50% {{transform: translateY(-10px) translateZ(20px);}}}}
     @keyframes heroFloat {{0%,100% {{transform: rotateX(2deg) translateZ(8px);}} 50% {{transform: rotateX(4deg) translateZ(14px);}}}}
     @keyframes cardFloat {{0%,100% {{transform: translateZ(0);}} 50% {{transform: translateZ(6px);}}}}
@@ -334,6 +477,7 @@ def inject_theme(theme: str) -> None:
         margin-top: 8px;
         background: {console_shell_bg};
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px rgba(2,6,23,0.18);
+        animation: shellBreath 14s ease-in-out infinite;
     }}
     .section-label {{
         font-size: 0.75rem;
@@ -348,6 +492,22 @@ def inject_theme(theme: str) -> None:
         border-radius: 14px;
         padding: 8px 10px 14px 10px;
         box-shadow: 0 16px 32px rgba(2,6,23,0.16);
+    }}
+    @media (prefers-reduced-motion: reduce) {{
+        .stApp::before,
+        .topnav,
+        .orb-stage,
+        .orb-halo,
+        .orb-ring,
+        .cloud-3d,
+        .orb-shine,
+        .node-svg .n-line,
+        .node-svg .n-node,
+        .console-shell,
+        .hero,
+        .feature {{
+            animation: none !important;
+        }}
     }}
 </style>
 """,
@@ -524,18 +684,36 @@ if show_marketing and view == "home":
   <p class='hero-title'>Nexovo Helling Cloud Platform</p>
   <p class='hero-sub'>Building scalable digital systems for the next generation.</p>
 </div>
-<div class='cloud-3d'></div>
+<div class='orb-stage'>
+  <div class='orb-halo'></div>
+  <div class='orb-ring'></div>
+  <div class='cloud-3d'>
+    <div class='orb-shine'></div>
+    <div class='orb-cavity'></div>
+  </div>
+</div>
 <div class='node-wrap'>
-  <svg class='node-svg' viewBox='0 0 960 140' width='100%' height='130' xmlns='http://www.w3.org/2000/svg'>
-    <line x1='80' y1='70' x2='280' y2='40' stroke='#38bdf8' stroke-width='2'/>
-    <line x1='280' y1='40' x2='480' y2='72' stroke='#818cf8' stroke-width='2'/>
-    <line x1='480' y1='72' x2='690' y2='38' stroke='#22d3ee' stroke-width='2'/>
-    <line x1='480' y1='72' x2='850' y2='94' stroke='#38bdf8' stroke-width='2'/>
-    <circle cx='80' cy='70' r='11' fill='#0ea5e9'/>
-    <circle cx='280' cy='40' r='12' fill='#6366f1'/>
-    <circle cx='480' cy='72' r='14' fill='#22d3ee'/>
-    <circle cx='690' cy='38' r='11' fill='#0ea5e9'/>
-    <circle cx='850' cy='94' r='12' fill='#6366f1'/>
+  <svg class='node-svg' viewBox='0 0 960 150' width='100%' height='150' xmlns='http://www.w3.org/2000/svg'>
+    <defs>
+      <linearGradient id='lg1' x1='0%' y1='0%' x2='100%' y2='0%'>
+        <stop offset='0%' style='stop-color:#38bdf8;stop-opacity:0.35'/>
+        <stop offset='50%' style='stop-color:#818cf8;stop-opacity:0.95'/>
+        <stop offset='100%' style='stop-color:#22d3ee;stop-opacity:0.45'/>
+      </linearGradient>
+      <filter id='nexovoGlow' x='-40%' y='-40%' width='180%' height='180%'>
+        <feGaussianBlur stdDeviation='2.2' result='b'/>
+        <feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge>
+      </filter>
+    </defs>
+    <line class='n-line' x1='80' y1='70' x2='280' y2='40' stroke='url(#lg1)' stroke-width='2.5' filter='url(#nexovoGlow)'/>
+    <line class='n-line' x1='280' y1='40' x2='480' y2='72' stroke='url(#lg1)' stroke-width='2.5' filter='url(#nexovoGlow)'/>
+    <line class='n-line' x1='480' y1='72' x2='690' y2='38' stroke='url(#lg1)' stroke-width='2.5' filter='url(#nexovoGlow)'/>
+    <line class='n-line' x1='480' y1='72' x2='850' y2='94' stroke='url(#lg1)' stroke-width='2.5' filter='url(#nexovoGlow)'/>
+    <circle class='n-node n-d1' cx='80' cy='70' r='11' fill='#0ea5e9' filter='url(#nexovoGlow)'/>
+    <circle class='n-node n-d2' cx='280' cy='40' r='12' fill='#6366f1' filter='url(#nexovoGlow)'/>
+    <circle class='n-node n-d3' cx='480' cy='72' r='14' fill='#22d3ee' filter='url(#nexovoGlow)'/>
+    <circle class='n-node n-d4' cx='690' cy='38' r='11' fill='#0ea5e9' filter='url(#nexovoGlow)'/>
+    <circle class='n-node n-d5' cx='850' cy='94' r='12' fill='#6366f1' filter='url(#nexovoGlow)'/>
   </svg>
 </div>
 <div class='feature-grid'>
