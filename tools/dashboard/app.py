@@ -718,6 +718,87 @@ def inject_theme(theme: str) -> None:
         border-radius: 12px;
         overflow: hidden;
     }}
+    @media (max-width: 1200px) {{
+        .feature-grid {{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }}
+        .pillar-grid {{
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }}
+        .hero-title {{
+            font-size: 1.55rem;
+        }}
+    }}
+    @media (max-width: 860px) {{
+        .topnav {{
+            padding: 10px 12px;
+            border-radius: 14px;
+        }}
+        .landing-hero {{
+            padding: 20px 18px 22px 18px;
+        }}
+        .headline-xl {{
+            font-size: clamp(1.2rem, 5.8vw, 1.55rem);
+        }}
+        .lede {{
+            font-size: 0.92rem;
+            line-height: 1.45;
+        }}
+        .feature-grid,
+        .pillar-grid,
+        .sales-grid {{
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }}
+        .plan-card-wrap,
+        .mini-hero,
+        .roi-panel,
+        .console-shell {{
+            padding: 14px;
+            border-radius: 14px;
+        }}
+        .node-wrap {{
+            height: 118px;
+        }}
+        iframe[title="streamlit.components.v1.html"] {{
+            border-radius: 14px;
+        }}
+    }}
+    @media (max-width: 640px) {{
+        .topnav {{
+            position: static;
+            margin-bottom: 10px;
+        }}
+        .hero {{
+            padding: 16px 14px;
+            border-radius: 14px;
+        }}
+        .hero-title {{
+            font-size: 1.2rem;
+        }}
+        .hero-sub {{
+            font-size: 0.84rem;
+        }}
+        .trust-row {{
+            gap: 6px;
+        }}
+        .trust-pill {{
+            font-size: 0.72rem;
+            padding: 6px 10px;
+        }}
+        div[data-testid="stButton"] > button,
+        div[data-testid="stLinkButton"] > a,
+        .stDownloadButton > button {{
+            font-size: 0.88rem !important;
+            min-height: 2.35rem;
+        }}
+        .section-head {{
+            font-size: 1.06rem;
+        }}
+        .section-sub {{
+            font-size: 0.84rem;
+        }}
+    }}
     @media (prefers-reduced-motion: reduce) {{
         .stApp::before,
         .topnav,
