@@ -28,7 +28,13 @@ THREE_GLOBE_HTML = """
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
-    #globe-root { width: 100%; height: 300px; display: block; }
+    #globe-root {
+      width: 100%;
+      height: 320px;
+      display: block;
+      border-radius: 18px;
+      background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.12), rgba(2, 6, 23, 0.06) 55%, transparent 75%);
+    }
     canvas { display: block; width: 100% !important; height: 100% !important; outline: none; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -38,7 +44,7 @@ THREE_GLOBE_HTML = """
   <script>
   (function () {
     var container = document.getElementById("globe-root");
-    var h = 300;
+    var h = 320;
     var w = Math.max(container.clientWidth || 800, 320);
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(42, w / h, 0.08, 120);
@@ -47,6 +53,9 @@ THREE_GLOBE_HTML = """
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
     container.appendChild(renderer.domElement);
 
     var group = new THREE.Group();
@@ -111,6 +120,7 @@ THREE_GLOBE_HTML = """
 
     var mx = 0, my = 0, tmx = 0, tmy = 0;
     var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var clock = new THREE.Clock();
     renderer.domElement.addEventListener("mousemove", function (e) {
       var rect = renderer.domElement.getBoundingClientRect();
       tmx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -122,15 +132,20 @@ THREE_GLOBE_HTML = """
     var baseY = 0;
     function animate() {
       requestAnimationFrame(animate);
-      mx += (tmx - mx) * 0.07;
-      my += (tmy - my) * 0.07;
-      if (!reducedMotion) baseY += 0.0042;
-      group.rotation.y = baseY + mx * 0.55;
-      group.rotation.x = my * 0.38;
-      points.rotation.y = baseY * 0.65 + 0.15;
-      points.rotation.x = my * 0.12;
-      camera.position.x = mx * 0.22;
-      camera.position.y = my * 0.18;
+      var delta = Math.min(clock.getDelta(), 0.033);
+      var ease = 1 - Math.exp(-6.8 * delta);
+      mx += (tmx - mx) * ease;
+      my += (tmy - my) * ease;
+      if (!reducedMotion) {
+        baseY += delta * 0.48;
+      }
+      var idleBob = reducedMotion ? 0 : Math.sin(baseY * 1.3) * 0.035;
+      group.rotation.y = baseY + mx * 0.4;
+      group.rotation.x = my * 0.24 + idleBob;
+      points.rotation.y = baseY * 0.52 + 0.15;
+      points.rotation.x = my * 0.08;
+      camera.position.x = mx * 0.16;
+      camera.position.y = my * 0.13;
       camera.lookAt(0, 0, 0);
       renderer.render(scene, camera);
     }
@@ -246,6 +261,38 @@ def inject_theme(theme: str) -> None:
         color: {hero_sub};
         font-size: 0.95rem;
     }}
+    .reveal {{
+        animation: fadeUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }}
+    .reveal-delay-1 {{ animation-delay: 0.08s; }}
+    .reveal-delay-2 {{ animation-delay: 0.16s; }}
+    .reveal-delay-3 {{ animation-delay: 0.24s; }}
+    .section-head {{
+        margin: 0 0 6px 0;
+        font-size: 1.3rem;
+        font-weight: 760;
+        letter-spacing: -0.015em;
+    }}
+    .section-sub {{
+        margin: 0 0 12px 0;
+        opacity: 0.82;
+        font-size: 0.92rem;
+    }}
+    .skeleton-stack {{
+        display: grid;
+        gap: 10px;
+        margin: 6px 0 14px 0;
+    }}
+    .skeleton-line {{
+        height: 14px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, rgba(148,163,184,0.14), rgba(148,163,184,0.28), rgba(148,163,184,0.14));
+        background-size: 220% 100%;
+        animation: shimmer 1.4s linear infinite;
+    }}
+    .skeleton-line.short {{ width: 62%; }}
+    .skeleton-line.mid {{ width: 78%; }}
+    .skeleton-line.full {{ width: 100%; }}
     .feature-grid {{
         display: grid;
         grid-template-columns: repeat(4, minmax(0,1fr));
@@ -490,6 +537,14 @@ def inject_theme(theme: str) -> None:
     @keyframes heroFloat {{0%,100% {{transform: rotateX(2deg) translateZ(8px);}} 50% {{transform: rotateX(4deg) translateZ(14px);}}}}
     @keyframes cardFloat {{0%,100% {{transform: translateZ(0);}} 50% {{transform: translateZ(6px);}}}}
     @keyframes shift {{0% {{background-position: 0% 50%;}} 50% {{background-position: 100% 50%;}} 100% {{background-position: 0% 50%;}}}}
+    @keyframes fadeUp {{
+        0% {{ opacity: 0; transform: translateY(10px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    @keyframes shimmer {{
+        0% {{ background-position: 220% 0; }}
+        100% {{ background-position: -220% 0; }}
+    }}
     .landing-hero {{
         background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(56,189,248,0.08) 50%, rgba(99,102,241,0.06) 100%);
         border: 1px solid {border};
@@ -628,6 +683,40 @@ def inject_theme(theme: str) -> None:
         border: none !important;
         border-radius: 18px;
         box-shadow: 0 24px 56px rgba(2, 6, 23, 0.35), 0 0 60px rgba(14, 165, 233, 0.12);
+        transition: transform 0.45s ease, box-shadow 0.45s ease;
+    }}
+    iframe[title="streamlit.components.v1.html"]:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 28px 64px rgba(2, 6, 23, 0.38), 0 0 76px rgba(14, 165, 233, 0.18);
+    }}
+    div[data-testid="stButton"] > button,
+    div[data-testid="stLinkButton"] > a,
+    .stDownloadButton > button {{
+        border-radius: 12px !important;
+        transition: transform 0.24s ease, box-shadow 0.28s ease, border-color 0.28s ease !important;
+    }}
+    div[data-testid="stButton"] > button:hover,
+    div[data-testid="stLinkButton"] > a:hover,
+    .stDownloadButton > button:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(14, 165, 233, 0.2);
+    }}
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextArea"] textarea,
+    div[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    div[data-testid="stNumberInput"] input {{
+        border-radius: 10px !important;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+    }}
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stTextArea"] textarea:focus,
+    div[data-testid="stNumberInput"] input:focus {{
+        border-color: rgba(56, 189, 248, 0.55) !important;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.16) !important;
+    }}
+    div[data-testid="stDataFrame"] {{
+        border-radius: 12px;
+        overflow: hidden;
     }}
     @media (prefers-reduced-motion: reduce) {{
         .stApp::before,
@@ -641,7 +730,13 @@ def inject_theme(theme: str) -> None:
         .node-svg .n-node,
         .console-shell,
         .hero,
-        .feature {{
+        .feature,
+        iframe[title="streamlit.components.v1.html"] {{
+            animation: none !important;
+            transition: none !important;
+        }}
+        .reveal,
+        .skeleton-line {{
             animation: none !important;
         }}
     }}
@@ -666,6 +761,32 @@ def gauge(label: str, value: float, max_value: float = 100.0) -> None:
     <div style='width:{pct:.1f}%;height:10px;background:{color};box-shadow:0 0 12px {color};'></div>
   </div>
   <div class='tiny' style='margin-top:6px;'>{value:.1f}% utilization</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_header(title: str, subtitle: str | None = None, delay_class: str = "") -> None:
+    subtitle_html = f"<p class='section-sub'>{subtitle}</p>" if subtitle else ""
+    st.markdown(
+        f"""
+<div class='reveal {delay_class}'>
+  <h3 class='section-head'>{title}</h3>
+  {subtitle_html}
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_loading_skeleton() -> None:
+    st.markdown(
+        """
+<div class='skeleton-stack reveal reveal-delay-1'>
+  <div class='skeleton-line full'></div>
+  <div class='skeleton-line mid'></div>
+  <div class='skeleton-line short'></div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -886,6 +1007,7 @@ if show_marketing and view == "home":
     )
 
 if show_marketing and view == "pricing":
+    st.markdown("<div class='reveal reveal-delay-1'>", unsafe_allow_html=True)
     st.markdown(
         """
 <div class='mini-hero'>
@@ -895,6 +1017,7 @@ if show_marketing and view == "pricing":
 """,
         unsafe_allow_html=True,
     )
+    st.markdown("</div>", unsafe_allow_html=True)
     render_plan_cards("_price")
     st.markdown("### Frequently asked questions")
     with st.expander("What is included in the Growth plan?"):
@@ -1172,12 +1295,17 @@ if show_marketing and st.session_state.get("nexovo_view") == "integrations":
 
 if show_marketing and view in ("home", "pricing", "contact", "integrations"):
     st.divider()
-    st.markdown("### Live operations console")
-    st.caption(
-        "KPIs, incident feed, simulator, and intelligence toolkit — scroll to explore without switching tabs."
+    render_section_header(
+        "Live operations console",
+        "KPIs, incident feed, simulator, and intelligence toolkit — scroll to explore without switching tabs.",
+        "reveal-delay-2",
     )
 
 st.markdown("<div class='console-shell'>", unsafe_allow_html=True)
+
+loading_placeholder = st.empty()
+with loading_placeholder.container():
+    render_loading_skeleton()
 
 try:
     incidents = get_json("/v1/incidents")
@@ -1193,6 +1321,8 @@ try:
     audit_events = get_json("/v1/audit")
 except Exception:
     audit_events = []
+
+loading_placeholder.empty()
 
 if demo_mode and "demo_incidents" not in st.session_state:
     st.session_state["demo_incidents"] = []
@@ -1549,7 +1679,11 @@ with left:
     else:
         st.info("No remediation actions recorded yet.")
 
-st.markdown("## Operations Intelligence Toolkit")
+render_section_header(
+    "Operations Intelligence Toolkit",
+    "Service analytics, runbooks, planning, architecture, and auditability in one place.",
+    "reveal-delay-3",
+)
 ops_tab, runbook_tab, planner_tab, architecture_tab, audit_tab = st.tabs(
     [
         "Service Intelligence",
